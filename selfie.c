@@ -7028,6 +7028,9 @@ void printUsage() {
 int selfie() {
   int* option;
 
+  print((int*) "This is Tabea Biel's selfie");
+  println();
+
   if (numberOfRemainingArguments() == 0)
     printUsage();
   else {
