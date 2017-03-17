@@ -179,22 +179,22 @@ int* binary_buffer;    // buffer for binary I/O
 // WINDOWS: 32768 = 0x8000 = _O_BINARY (0x8000) | _O_RDONLY (0x0000)
 // since LINUX/MAC do not seem to mind about _O_BINARY set
 // we use the WINDOWS flags as default
-int O_RDONLY = 32768;
+int O_RDONLY = 0b1000000000000000;
 
 // flags for opening write-only files
 // MAC: 1537 = 0x0601 = O_CREAT (0x0200) | O_TRUNC (0x0400) | O_WRONLY (0x0001)
-int MAC_O_CREAT_TRUNC_WRONLY = 1537;
+int MAC_O_CREAT_TRUNC_WRONLY = 0x0601;
 
 // LINUX: 577 = 0x0241 = O_CREAT (0x0040) | O_TRUNC (0x0200) | O_WRONLY (0x0001)
-int LINUX_O_CREAT_TRUNC_WRONLY = 577;
+int LINUX_O_CREAT_TRUNC_WRONLY = 0x0241;
 
 // WINDOWS: 33537 = 0x8301 = _O_BINARY (0x8000) | _O_CREAT (0x0100) | _O_TRUNC (0x0200) | _O_WRONLY (0x0001)
-int WINDOWS_O_BINARY_CREAT_TRUNC_WRONLY = 33537;
+int WINDOWS_O_BINARY_CREAT_TRUNC_WRONLY = 0x8301;
 
 // flags for rw-r--r-- file permissions
 // 420 = 00644 = S_IRUSR (00400) | S_IWUSR (00200) | S_IRGRP (00040) | S_IROTH (00004)
 // these flags seem to be working for LINUX, MAC, and WINDOWS
-int S_IRUSR_IWUSR_IRGRP_IROTH = 420;
+int S_IRUSR_IWUSR_IRGRP_IROTH = 00644;
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -702,27 +702,27 @@ void printFunction(int function);
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
-int OP_SPECIAL = 0;
-int OP_J       = 2;
-int OP_JAL     = 3;
-int OP_BEQ     = 4;
-int OP_BNE     = 5;
-int OP_ADDIU   = 9;
-int OP_LW      = 35;
-int OP_SW      = 43;
+int OP_SPECIAL = 0x0;
+int OP_J       = 0x2;
+int OP_JAL     = 0x3;
+int OP_BEQ     = 0x4;
+int OP_BNE     = 0x5;
+int OP_ADDIU   = 0x9;
+int OP_LW      = 0x23;
+int OP_SW      = 0x2b;
 
 int* OPCODES; // strings representing MIPS opcodes
 
-int FCT_NOP     = 0;
-int FCT_JR      = 8;
-int FCT_SYSCALL = 12;
-int FCT_MFHI    = 16;
-int FCT_MFLO    = 18;
-int FCT_MULTU   = 25;
-int FCT_DIVU    = 27;
-int FCT_ADDU    = 33;
-int FCT_SUBU    = 35;
-int FCT_SLT     = 42;
+int FCT_NOP     = 0x0;
+int FCT_JR      = 0x8;
+int FCT_SYSCALL = 0xc;
+int FCT_MFHI    = 0x10;
+int FCT_MFLO    = 0x12;
+int FCT_MULTU   = 0x19;
+int FCT_DIVU    = 0x1b;
+int FCT_ADDU    = 0x21;
+int FCT_SUBU    = 0x23;
+int FCT_SLT     = 0x2a;
 
 int* FUNCTIONS; // strings representing MIPS functions
 
@@ -1408,6 +1408,7 @@ int atoi(int* s) {
   int i;
   int n;
   int c;
+  int basis;
 
   // the conversion of the ASCII string in s to its numerical value n
   // begins with the leftmost digit in s
@@ -1418,21 +1419,67 @@ int atoi(int* s) {
 
   c = loadCharacter(s, i);
 
+  if(c == '0'){
+    i = i + 1;
+    c = loadCharacter(s, i);
+    if(c == '0'){
+      basis = 8;
+    }else if(c == 'b'){
+      basis = 2;
+    }else if(c == 'x'){
+      basis = 16;
+    }
+    i = i + 1;
+    c = loadCharacter(s, i);
+  }else if(c > '0' && c <= '9'){
+    basis = 10;
+  }else{
+    return -1;
+  }
+
   // loop until s is terminated
   while (c != 0) {
     // the numerical value of ASCII-encoded decimal digits
     // is offset by the ASCII code of '0' (which is 48)
     c = c - '0';
 
+
     if (c < 0)
       // c was not a decimal digit
       return -1;
-    else if (c > 9)
+    if (c > 9)
+      if(c == 97-48)
+        c = 10;
+      else if(c == 98-48)
+        c = 11;
+      else if(c == 99-48)
+        c = 12;
+      else if(c == 100-48)
+        c = 13;
+      else if(c == 101-48)
+        c = 14;
+      else if(c == 102-48)
+        c = 15;
+      else if(c == 65-48)
+        c = 10;
+      else if(c == 66-48)
+        c = 11;
+      else if(c == 67-48)
+        c = 12;
+      else if(c == 68-48)
+        c = 13;
+      else if(c == 69-48)
+        c = 14;
+      else if(c == 70-48)
+        c = 15;
+      else
+        c = basis + 1;
+    if (c >= basis)
       // c was not a decimal digit
       return -1;
 
     // assert: s contains a decimal number, that is, with base 10
-    n = n * 10 + c;
+    n = n * basis + c;
 
     // go to the next digit
     i = i + 1;
@@ -7029,7 +7076,6 @@ int selfie() {
   int* option;
 
   print((int*) "This is Tabea Biel's selfie");
-  println();
 
   if (numberOfRemainingArguments() == 0)
     printUsage();
