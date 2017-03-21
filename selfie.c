@@ -106,7 +106,7 @@ int  stringLength(int* s);
 void stringReverse(int* s);
 int  stringCompare(int* s, int* t);
 
-int  atoi(int* s);
+int  atoi(int* s, int base);
 int* itoa(int n, int* s, int b, int a, int p);
 
 int fixedPointRatio(int a, int b);
@@ -320,7 +320,7 @@ int SYM_STRING       = 27; // string
 int* SYMBOLS; // strings representing symbols
 
 int maxIdentifierLength = 64; // maximum number of characters in an identifier
-int maxIntegerLength    = 10; // maximum number of characters in an integer
+int maxIntegerLength    = 32; // maximum number of characters in an integer
 int maxStringLength     = 128; // maximum number of characters in a string
 
 // ------------------------ GLOBAL VARIABLES -----------------------
@@ -1404,12 +1404,11 @@ int stringCompare(int* s, int* t) {
       return 0;
 }
 
-int atoi(int* s) {
+int atoi(int* s, int base) {
   int i;
   int n;
   int c;
-  int basis;
-
+  
   // the conversion of the ASCII string in s to its numerical value n
   // begins with the leftmost digit in s
   i = 0;
@@ -1419,67 +1418,36 @@ int atoi(int* s) {
 
   c = loadCharacter(s, i);
 
-  if(c == '0'){
-    i = i + 1;
-    c = loadCharacter(s, i);
-    if(c == '0'){
-      basis = 8;
-    }else if(c == 'b'){
-      basis = 2;
-    }else if(c == 'x'){
-      basis = 16;
-    }
-    i = i + 1;
-    c = loadCharacter(s, i);
-  }else if(c > '0' && c <= '9'){
-    basis = 10;
-  }else{
-    return -1;
-  }
-
   // loop until s is terminated
   while (c != 0) {
     // the numerical value of ASCII-encoded decimal digits
     // is offset by the ASCII code of '0' (which is 48)
     c = c - '0';
 
-
     if (c < 0)
-      // c was not a decimal digit
+      // c was not a digit
       return -1;
-    if (c > 9)
-      if(c == 97-48)
-        c = 10;
-      else if(c == 98-48)
-        c = 11;
-      else if(c == 99-48)
-        c = 12;
-      else if(c == 100-48)
-        c = 13;
-      else if(c == 101-48)
-        c = 14;
-      else if(c == 102-48)
-        c = 15;
-      else if(c == 65-48)
-        c = 10;
-      else if(c == 66-48)
-        c = 11;
-      else if(c == 67-48)
-        c = 12;
-      else if(c == 68-48)
-        c = 13;
-      else if(c == 69-48)
-        c = 14;
-      else if(c == 70-48)
-        c = 15;
-      else
-        c = basis + 1;
-    if (c >= basis)
-      // c was not a decimal digit
+  
+    if (c > 9){
+      if(c >= 'a'-'0'){
+        if(c <= 'f'-'0'){
+          c = c-39;
+        }
+      }else{
+        if(c >= 'A'-'0'){
+          if(c <= 'F'-'0'){
+            c = c-7;
+          }  
+        }
+      }
+    }
+  
+    if (c >= base)
+      // c was not a digit of the used base
       return -1;
 
-    // assert: s contains a decimal number, that is, with base 10
-    n = n * basis + c;
+    // assert: s contains a decimal number, that is, with base b
+    n = n * base + c;
 
     // go to the next digit
     i = i + 1;
@@ -1984,6 +1952,21 @@ int isCharacterDigit() {
     return 0;
 }
 
+////////////////////////////////////////////////////////////////////
+int isHexadecimalDigit(){
+  int is;
+  is=isCharacterDigit();
+  if(is==1) return 1;
+  if(character>='a'){
+    if(character<='f') return 1;
+  }
+  if(character>='A'){
+    if(character<='F') return 1;
+  }
+  return 0;
+}
+////////////////////////////////////////////////////////////////////
+
 int isCharacterLetterOrDigitOrUnderscore() {
   if (isCharacterLetter())
     return 1;
@@ -2029,6 +2012,8 @@ int identifierOrKeyword() {
 
 void getSymbol() {
   int i;
+  int base;
+
 
   // reset previously scanned symbol
   symbol = SYM_EOF;
@@ -2065,25 +2050,62 @@ void getSymbol() {
         // accommodate integer and null for termination
         integer = malloc(maxIntegerLength + 1);
 
-        i = 0;
-
-        while (isCharacterDigit()) {
-          if (i >= maxIntegerLength) {
-            syntaxErrorMessage((int*) "integer out of bound");
-
-            exit(-1);
+      /////////////////////////////////////////////////////////////////////
+        if(character!='0'){
+          base=10;
+        }else{
+          getCharacter();
+          if(isCharacterDigit()){
+            if(character<'9'){ 
+              base=8;
+            }
+          }else if(character=='b'){
+            base=2;
+          }else if(character=='B'){ 
+            base=2;
+          }else if(character=='x'){
+            base=16;
+          }else if(character=='X'){
+            base=16;
+          }else{
+            base=10;
           }
+        }
+
+      if(base!=10){
+        if(base!=8) getCharacter();
+      }
+/////////////////////////////////////////////////////////////////////
+
+      i = 0;
+      while (isHexadecimalDigit()) {
+          if (i >= maxIntegerLength) {
+              syntaxErrorMessage((int*) "integer out of bound");
+
+              exit(-1);
+          }
+
 
           storeCharacter(integer, i, character);
 
           i = i + 1;
 
           getCharacter();
+      }
+
+/////////////////////////////////////////////////////////////////////
+      if(i==0){
+        if(base!=10){
+          syntaxErrorMessage((int*) "literal contains only prefix");
+
+              exit(-1);
         }
+      }
+      /////////////////////////////////////////////////////////////////////
 
-        storeCharacter(integer, i, 0); // null-terminated string
+      storeCharacter(integer, i, 0); // null-terminated string
 
-        literal = atoi(integer);
+      literal = atoi(integer, base);
 
         if (literal < 0) {
           if (literal == INT_MIN) {
@@ -6989,7 +7011,7 @@ int selfie_run(int engine, int machine, int debugger) {
     exit(-1);
   }
 
-  initMemory(atoi(peekArgument()));
+  initMemory(atoi(peekArgument(), 10));
 
   // pass binary name as first argument by replacing memory size
   setArgument(binaryName);
@@ -7074,9 +7096,9 @@ void printUsage() {
 
 int selfie() {
   int* option;
-
   print((int*) "This is Tabea Biel's selfie");
-
+  println();
+  
   if (numberOfRemainingArguments() == 0)
     printUsage();
   else {
