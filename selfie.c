@@ -106,7 +106,7 @@ int  stringLength(int* s);
 void stringReverse(int* s);
 int  stringCompare(int* s, int* t);
 
-int  atoi(int* s, int base);
+int  atoi(int* s, int b);
 int* itoa(int n, int* s, int b, int a, int p);
 
 int fixedPointRatio(int a, int b);
@@ -1404,7 +1404,7 @@ int stringCompare(int* s, int* t) {
       return 0;
 }
 
-int atoi(int* s, int base) {
+int atoi(int* s, int b) {
   int i;
   int n;
   int c;
@@ -1438,16 +1438,18 @@ int atoi(int* s, int base) {
           if(c <= 'F'-'0'){
             c = c-7;
           }  
+        }else{
+          c = 16;
         }
       }
     }
   
-    if (c >= base)
+    if (c >= b)
       // c was not a digit of the used base
       return -1;
 
     // assert: s contains a decimal number, that is, with base b
-    n = n * base + c;
+    n = n * b + c;
 
     // go to the next digit
     i = i + 1;
