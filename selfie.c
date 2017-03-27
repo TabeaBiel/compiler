@@ -671,8 +671,8 @@ void initRegister() {
 // -----------------------------------------------------------------
 // ---------------------------- ENCODER ----------------------------
 // -----------------------------------------------------------------
-
-int encodeRFormat(int opcode, int rs, int rt, int rd, int function);
+// Tabea hw3 int shiftAmount hinzugefügt
+int encodeRFormat(int opcode, int rs, int rt, int rd, int shiftAmount, int function);
 int encodeIFormat(int opcode, int rs, int rt, int immediate);
 int encodeJFormat(int opcode, int instr_index);
 
@@ -690,6 +690,9 @@ int getFunction(int instruction);
 int getImmediate(int instruction);
 int getInstrIndex(int instruction);
 int signExtend(int immediate);
+
+// Tabea hw3
+int getShamt(int instruction);
 
 void decodeRFormat();
 void decodeIFormat();
@@ -713,7 +716,8 @@ int OP_SW      = 0x2b;
 
 int* OPCODES; // strings representing MIPS opcodes
 
-int FCT_NOP     = 0x0;
+// Tabea hw3
+//int FCT_NOP     = 0x0;
 int FCT_JR      = 0x8;
 int FCT_SYSCALL = 0xc;
 int FCT_MFHI    = 0x10;
@@ -723,6 +727,12 @@ int FCT_DIVU    = 0x1b;
 int FCT_ADDU    = 0x21;
 int FCT_SUBU    = 0x23;
 int FCT_SLT     = 0x2a;
+
+// Tabea hw3
+int FCT_SLL = 0x0;
+int FCT_SRL = 0x2;
+int FCT_SLLV = 0x4;
+int FCT_SRLV = 0x6;
 
 int* FUNCTIONS; // strings representing MIPS functions
 
@@ -735,6 +745,8 @@ int rd          = 0;
 int immediate   = 0;
 int function    = 0;
 int instr_index = 0;
+// Tabea hw3
+int shamt       = 0;
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -752,7 +764,8 @@ void initDecoder() {
 
   FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
 
-  *(FUNCTIONS + FCT_NOP)     = (int) "nop";
+  // Tabea hw3
+  //*(FUNCTIONS + FCT_NOP)     = (int) "nop";
   *(FUNCTIONS + FCT_JR)      = (int) "jr";
   *(FUNCTIONS + FCT_SYSCALL) = (int) "syscall";
   *(FUNCTIONS + FCT_MFHI)    = (int) "mfhi";
@@ -762,6 +775,12 @@ void initDecoder() {
   *(FUNCTIONS + FCT_ADDU)    = (int) "addu";
   *(FUNCTIONS + FCT_SUBU)    = (int) "subu";
   *(FUNCTIONS + FCT_SLT)     = (int) "slt";
+
+  // Tabea hw3
+   *(FUNCTIONS + FCT_SLL)     = (int) "sll";
+   *(FUNCTIONS + FCT_SRL)     = (int) "srl";
+   *(FUNCTIONS + FCT_SRLV)     = (int) "srlv";
+   *(FUNCTIONS + FCT_SLLV)     = (int) "sllv";
 }
 
 // -----------------------------------------------------------------
@@ -772,7 +791,8 @@ int  loadBinary(int baddr);
 void storeBinary(int baddr, int instruction);
 
 void emitInstruction(int instruction);
-void emitRFormat(int opcode, int rs, int rt, int rd, int function);
+// Tabea hw3 int shmat hinzugefügt
+void emitRFormat(int opcode, int rs, int rt, int rd, int shamt, int function);
 void emitIFormat(int opcode, int rs, int rt, int immediate);
 void emitJFormat(int opcode, int instr_index);
 
@@ -962,7 +982,8 @@ void initMemory(int megabytes) {
 // -----------------------------------------------------------------
 
 void fct_syscall();
-void fct_nop();
+// Tabea hw3
+//void fct_nop();
 void op_jal();
 void op_j();
 void op_beq();
@@ -978,6 +999,12 @@ void fct_subu();
 void op_lw();
 void fct_slt();
 void op_sw();
+
+// Tabea hw3
+void fct_sll();
+void fct_sllv();
+void fct_srlv();
+void fct_srl();
 
 // -----------------------------------------------------------------
 // -------------------------- INTERPRETER --------------------------
@@ -1403,7 +1430,7 @@ int stringCompare(int* s, int* t) {
     else
       return 0;
 }
-
+// Tabea hw2
 int atoi(int* s, int b) {
   int i;
   int n;
@@ -1955,6 +1982,7 @@ int isCharacterDigit() {
 }
 
 ////////////////////////////////////////////////////////////////////
+// Tabea hw2
 int isHexadecimalDigit(){
   int is;
   is=isCharacterDigit();
@@ -2011,7 +2039,7 @@ int identifierOrKeyword() {
   else
     return SYM_IDENTIFIER;
 }
-
+// Tabea hw2
 void getSymbol() {
   int i;
   int base;
@@ -2052,7 +2080,8 @@ void getSymbol() {
         // accommodate integer and null for termination
         integer = malloc(maxIntegerLength + 1);
 
-      /////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
+// Tabea hw2
         if(character!='0'){
           base=10;
         }else{
@@ -2078,7 +2107,7 @@ void getSymbol() {
         if(base!=8) getCharacter();
       }
 /////////////////////////////////////////////////////////////////////
-
+// Tabea hw2
       i = 0;
       while (isHexadecimalDigit()) {
           if (i >= maxIntegerLength) {
@@ -2096,6 +2125,7 @@ void getSymbol() {
       }
 
 /////////////////////////////////////////////////////////////////////
+// Tabea hw2
       if(i==0){
         if(base!=10){
           syntaxErrorMessage((int*) "literal contains only prefix");
@@ -2103,7 +2133,7 @@ void getSymbol() {
               exit(-1);
         }
       }
-      /////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
 
       storeCharacter(integer, i, 0); // null-terminated string
 
@@ -2814,7 +2844,8 @@ void help_procedure_epilogue(int parameters) {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, (parameters + 1) * WORDSIZE);
 
   // return
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 int gr_call(int* procedure) {
@@ -3064,16 +3095,22 @@ int gr_term() {
       typeWarning(ltype, rtype);
 
     if (operatorSymbol == SYM_ASTERISK) {
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
-      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, 0, FCT_MULTU);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), 0, FCT_MFLO);
 
     } else if (operatorSymbol == SYM_DIV) {
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
-      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, 0, FCT_DIVU);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), 0, FCT_MFLO);
 
     } else if (operatorSymbol == SYM_MOD) {
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
-      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, 0, FCT_DIVU);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), 0, FCT_MFHI);
     }
 
     tfree(1);
@@ -3123,8 +3160,8 @@ int gr_simpleExpression() {
 
       ltype = INT_T;
     }
-
-    emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
+    // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+    emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), 0, FCT_SUBU);
   }
 
   // + or -?
@@ -3144,14 +3181,14 @@ int gr_simpleExpression() {
           emitLeftShiftBy(2);
       } else if (rtype == INTSTAR_T)
         typeWarning(ltype, rtype);
-
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_ADDU);
 
     } else if (operatorSymbol == SYM_MINUS) {
       if (ltype != rtype)
         typeWarning(ltype, rtype);
-
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SUBU);
     }
 
     tfree(1);
@@ -3188,7 +3225,8 @@ int gr_expression() {
 
     if (operatorSymbol == SYM_EQUALITY) {
       // subtract, if result = 0 then 1, else 0
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SUBU);
 
       tfree(1);
 
@@ -3199,7 +3237,8 @@ int gr_expression() {
 
     } else if (operatorSymbol == SYM_NOTEQ) {
       // subtract, if result = 0 then 0, else 1
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SUBU);
 
       tfree(1);
 
@@ -3210,19 +3249,22 @@ int gr_expression() {
 
     } else if (operatorSymbol == SYM_LT) {
       // set to 1 if a < b, else 0
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SLT);
 
       tfree(1);
 
     } else if (operatorSymbol == SYM_GT) {
       // set to 1 if b < a, else 0
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLT);
 
       tfree(1);
 
     } else if (operatorSymbol == SYM_LEQ) {
       // if b < a set 0, else 1
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLT);
 
       tfree(1);
 
@@ -3233,7 +3275,8 @@ int gr_expression() {
 
     } else if (operatorSymbol == SYM_GEQ) {
       // if a < b set 0, else 1
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SLT);
 
       tfree(1);
 
@@ -3425,7 +3468,8 @@ void gr_return() {
       typeWarning(returnType, type);
 
     // save value of expression in return register
-    emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), REG_V0, FCT_ADDU);
+    // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+    emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), REG_V0, 0, FCT_ADDU);
 
     tfree(1);
   } else if (returnType != VOID_T)
@@ -3954,13 +3998,17 @@ void gr_cstar() {
 // ------------------------ MACHINE CODE LIBRARY -------------------
 // -----------------------------------------------------------------
 
+
 void emitLeftShiftBy(int b) {
   // assert: 0 <= b < 15
-
+  
+  // Tabea hw3
+  emitRFormat(OP_SPECIAL, currentTemporary(), 0, currentTemporary(), b, FCT_SLL);
+  
   // load multiplication factor less than 2^15 to avoid sign extension
-  emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), twoToThePowerOf(b));
-  emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
-  emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+  //emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), twoToThePowerOf(b));
+  //emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
+  //emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
 }
 
 void emitMainEntry() {
@@ -3978,8 +4026,10 @@ void emitMainEntry() {
   // 8 NOPs per register is enough for initialization
   // since we load positive integers < 2^28 which take
   // no more than 8 instructions each, see load_integer
+  // Tabea hw3 FCT_SLL statt FCT_NOP
   while (i < 16) {
-    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP);
+    // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL);
 
     i = i + 1;
   }
@@ -4213,16 +4263,16 @@ void printRegister(int reg) {
 // 32 bit
 //
 // +------+-----+-----+-----+-----+------+
-// |opcode| rs  | rt  | rd  |00000|fction|
+// |opcode| rs  | rt  | rd  |shamt|fction|
 // +------+-----+-----+-----+-----+------+
 //    6      5     5     5     5     6
-int encodeRFormat(int opcode, int rs, int rt, int rd, int function) {
+int encodeRFormat(int opcode, int rs, int rt, int rd, int shiftAmount, int function) {
   // assert: 0 <= opcode < 2^6
   // assert: 0 <= rs < 2^5
   // assert: 0 <= rt < 2^5
   // assert: 0 <= rd < 2^5
   // assert: 0 <= function < 2^6
-  return leftShift(leftShift(leftShift(leftShift(opcode, 5) + rs, 5) + rt, 5) + rd, 11) + function;
+  return leftShift(leftShift(leftShift(leftShift(leftShift(opcode, 5) + rs, 5) + rt, 5) + rd, 5)+ shiftAmount, 6) + function;
 }
 
 // -----------------------------------------------------------------
@@ -4297,11 +4347,15 @@ int signExtend(int immediate) {
     return immediate - twoToThePowerOf(16);
 }
 
+int getShamt(int instruction){
+  return rightShift(leftShift(instruction, 21), 27);
+}
+
 // --------------------------------------------------------------
 // 32 bit
 //
 // +------+-----+-----+-----+-----+------+
-// |opcode| rs  | rt  | rd  |00000|fction|
+// |opcode| rs  | rt  | rd  |shamt|fction|
 // +------+-----+-----+-----+-----+------+
 //    6      5     5     5     5     6
 void decodeRFormat() {
@@ -4311,6 +4365,7 @@ void decodeRFormat() {
   immediate   = 0;
   function    = getFunction(ir);
   instr_index = 0;
+  shamt = getShamt(ir);
 }
 
 // --------------------------------------------------------------
@@ -4392,21 +4447,31 @@ void emitInstruction(int instruction) {
     binaryLength = binaryLength + WORDSIZE;
   }
 }
-
-void emitRFormat(int opcode, int rs, int rt, int rd, int function) {
-  emitInstruction(encodeRFormat(opcode, rs, rt, rd, function));
+// Tabea hw3 int shamt hinzugefügt
+void emitRFormat(int opcode, int rs, int rt, int rd, int shamt, int function) {
+  emitInstruction(encodeRFormat(opcode, rs, rt, rd, shamt, function));
 
   if (opcode == OP_SPECIAL) {
     if (function == FCT_JR)
-      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+      // Tabea hw3 FCT_SLL statt FCT_NOP
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // delay slot
     else if (function == FCT_MFLO) {
       // In MIPS I-III two instructions after MFLO/MFHI
       // must not modify the LO/HI registers
-      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
-      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
+      // Tabea hw3 FCT_SLL statt FCT_NOP
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // pipeline delay
+      // Tabea hw3 FCT_SLL statt FCT_NOP
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // pipeline delay
     } else if (function == FCT_MFHI) {
-      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
-      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
+      // Tabea hw3 FCT_SLL statt FCT_NOP
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // pipeline delay
+      // Tabea hw3 FCT_SLL statt FCT_NOP
+      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // pipeline delay
     }
   }
 }
@@ -4415,15 +4480,20 @@ void emitIFormat(int opcode, int rs, int rt, int immediate) {
   emitInstruction(encodeIFormat(opcode, rs, rt, immediate));
 
   if (opcode == OP_BEQ)
-    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+    // Tabea hw3 FCT_SLL statt FCT_NOP
+    // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // delay slot
   else if (opcode == OP_BNE)
-    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+    // Tabea hw3 FCT_SLL statt FCT_NOP
+    // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // delay slot
 }
 
 void emitJFormat(int opcode, int instr_index) {
   emitInstruction(encodeJFormat(opcode, instr_index));
-
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
+// Tabea hw3 FCT_SLL statt FCT_NOP
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // delay slot
 }
 
 void fixup_relative(int fromAddress) {
@@ -4686,7 +4756,8 @@ void emitExit() {
 
   // load the correct syscall number and invoke syscall
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_EXIT);
-  emitRFormat(0, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(0, 0, 0, 0, 0, FCT_SYSCALL);
 
   // never returns here
 }
@@ -4726,10 +4797,12 @@ void emitRead() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_READ);
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
 
   // jump back to caller, return value is in REG_V0
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 void implementRead() {
@@ -4843,9 +4916,10 @@ void emitWrite() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_WRITE);
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
-
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 void implementWrite() {
@@ -4959,9 +5033,10 @@ void emitOpen() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_OPEN);
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
-
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 int down_loadString(int* table, int vaddr, int* s) {
@@ -5063,9 +5138,10 @@ void emitMalloc() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_MALLOC);
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
-
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 void implementMalloc() {
@@ -5110,9 +5186,10 @@ void emitID() {
   createSymbolTableEntry(LIBRARY_TABLE, (int*) "hypster_ID", 0, PROCEDURE, INT_T, 0, binaryLength);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_ID);
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
-
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 void implementID() {
@@ -5135,9 +5212,10 @@ void emitCreate() {
   createSymbolTableEntry(LIBRARY_TABLE, (int*) "hypster_create", 0, PROCEDURE, INT_T, 0, binaryLength);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_CREATE);
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
-
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 int doCreate(int parentID) {
@@ -5189,12 +5267,14 @@ void emitSwitch() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_SWITCH);
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
 
   // save ID of context from which we are switching here in return register
-  emitRFormat(OP_SPECIAL, REG_ZR, REG_V1, REG_V0, FCT_ADDU);
-
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_ZR, REG_V1, REG_V0, 0, FCT_ADDU);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 int doSwitch(int toID) {
@@ -5275,9 +5355,10 @@ void emitStatus() {
   createSymbolTableEntry(LIBRARY_TABLE, (int*) "hypster_status", 0, PROCEDURE, INT_T, 0, binaryLength);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_STATUS);
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
-
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 int doStatus() {
@@ -5320,9 +5401,10 @@ void emitDelete() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_DELETE);
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
-
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 void doDelete(int ID) {
@@ -5377,9 +5459,10 @@ void emitMap() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_MAP);
-  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
-
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
+  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
 }
 
 void doMap(int ID, int page, int frame) {
@@ -5595,7 +5678,7 @@ void fct_syscall() {
   }
 }
 
-void fct_nop() {
+/*void fct_nop() {
   if (debug) {
     printFunction(function);
     println();
@@ -5603,7 +5686,7 @@ void fct_nop() {
 
   if (interpret)
     pc = pc + WORDSIZE;
-}
+}*/
 
 void op_jal() {
   if (debug) {
@@ -6015,6 +6098,228 @@ void fct_addu() {
   }
 }
 
+// Tabea hw3
+void fct_sll() {
+
+  int isNop;
+  isNop = 0;
+  
+  if(rs == 0) 
+    if(rt == 0)
+      if(shamt == 0)
+        isNop = 1;
+      
+    if(debug) {
+      if(isNop) {
+        print((int*) "nop");
+        println();
+      } else {
+      printFunction(function);
+      print((int*) " ");
+      printRegister(rs);
+      print((int*) ", ");
+      printRegister(rt);
+      print((int*) ", ");
+      printRegister(rd);
+      print((int*) ", ");
+      printInteger(shamt);
+      }
+      
+      if(interpret) {
+        print((int*) ": ");
+        printRegister(rd);
+        print((int*) "=");
+        print((int*) *(registers+rd));
+        print((int*) ", ");
+        printRegister(rt);
+        print((int*) "=");
+        print((int*) *(registers + rs));
+      }
+    }
+    
+    if(interpret) {
+      *(registers + rd) = leftShift(*(registers + rs), shamt);
+      
+      pc = pc + WORDSIZE;
+    }
+    
+    if(debug) {
+      if(interpret) {
+        print((int*) " -> ");
+        printRegister(rd);
+        print((int*) "=");
+        print((int*) *(registers + rd));
+        println();
+      }
+    }
+
+}
+
+// Tabea hw3
+void fct_sllv() {
+  
+  int isNop;
+  isNop = 0;
+  
+  if(rs == 0) 
+    if(rt == 0)
+      if(shamt == 0)
+        isNop = 1;
+      
+    if(debug) {
+      if(isNop) {
+        print((int*) "nop");
+        println();
+      } else {
+      printFunction(function);
+      print((int*) " ");
+      printRegister(rs);
+      print((int*) ", ");
+      printRegister(rt);
+      print((int*) ", ");
+      printRegister(rd);
+      print((int*) ", ");
+      printInteger(shamt);
+      }
+      
+      if(interpret) {
+        print((int*) ": ");
+        printRegister(rd);
+        print((int*) "=");
+        print((int*) *(registers+rd));
+        print((int*) ", ");
+        printRegister(rt);
+        print((int*) "=");
+        print((int*) *(registers + rs));
+      }
+    }
+    
+    if(interpret) {
+      *(registers + rd) = leftShift(*(registers + rs), *(registers + rt));
+      
+      pc = pc + WORDSIZE;
+    }
+    
+    if(debug) {
+      if(interpret) {
+        print((int*) " -> ");
+        printRegister(rd);
+        print((int*) "=");
+        print((int*) *(registers + rd));
+      }
+    }
+}
+
+// Tabea hw3
+void fct_srl() {
+  
+  int isNop;
+  isNop = 0;
+  
+  if(rs == 0) 
+    if(rt == 0)
+      if(shamt == 0)
+        isNop = 1;
+      
+    if(debug) {
+      if(isNop) {
+        print((int*) "nop");
+        println();
+      } else {
+      printFunction(function);
+      print((int*) " ");
+      printRegister(rs);
+      print((int*) ", ");
+      printRegister(rt);
+      print((int*) ", ");
+      printRegister(rd);
+      print((int*) ", ");
+      printInteger(shamt);
+      }
+      
+      if(interpret) {
+        print((int*) ": ");
+        printRegister(rd);
+        print((int*) "=");
+        print((int*) *(registers+rd));
+        print((int*) ", ");
+        printRegister(rt);
+        print((int*) "=");
+        print((int*) *(registers + rs));
+      }
+    }
+    
+    if(interpret) {
+      *(registers + rd) = rightShift(*(registers + rs), shamt);
+      
+      pc = pc + WORDSIZE;
+    }
+    
+    if(debug) {
+      if(interpret) {
+        print((int*) " -> ");
+        printRegister(rd);
+        print((int*) "=");
+        print((int*) *(registers + rd));
+      }
+    }
+}
+
+// Tabea hw3
+void fct_srlv() {
+  
+  int isNop;
+  isNop = 0;
+  
+  if(rs == 0) 
+    if(rt == 0)
+      if(shamt == 0)
+        isNop = 1;
+      
+    if(debug) {
+      if(isNop) {
+        print((int*) "nop");
+        println();
+      } else {
+      printFunction(function);
+      print((int*) " ");
+      printRegister(rs);
+      print((int*) ", ");
+      printRegister(rt);
+      print((int*) ", ");
+      printRegister(rd);
+      print((int*) ", ");
+      printInteger(shamt);
+      }
+      
+      if(interpret) {
+        print((int*) ": ");
+        printRegister(rd);
+        print((int*) "=");
+        print((int*) *(registers+rd));
+        print((int*) ", ");
+        printRegister(rt);
+        print((int*) "=");
+        print((int*) *(registers + rs));
+      }
+    }
+    
+    if(interpret) {
+      *(registers + rd) = rightShift(*(registers + rs), *(registers + rt));
+      
+      pc = pc + WORDSIZE;
+    }
+    
+    if(debug) {
+      if(interpret) {
+        print((int*) " -> ");
+        printRegister(rd);
+        print((int*) "=");
+        print((int*) *(registers + rd));
+      }
+    }
+}
+
 void fct_subu() {
   if (debug) {
     printFunction(function);
@@ -6299,9 +6604,7 @@ void execute() {
   }
 
   if (opcode == OP_SPECIAL) {
-    if (function == FCT_NOP)
-      fct_nop();
-    else if (function == FCT_ADDU)
+    if (function == FCT_ADDU)
       fct_addu();
     else if (function == FCT_SUBU)
       fct_subu();
@@ -6319,6 +6622,15 @@ void execute() {
       fct_jr();
     else if (function == FCT_SYSCALL)
       fct_syscall();
+    // Tabea hw3 FCT's hinzugefügt
+    else if (function == FCT_SLL)
+      fct_sll();
+    else if (function == FCT_SRLV)
+      fct_srlv();
+    else if (function == FCT_SLLV)
+      fct_sllv();
+    else if (function == FCT_SRL)
+      fct_srl();
     else
       throwException(EXCEPTION_UNKNOWNINSTRUCTION, 0);
   } else if (opcode == OP_ADDIU)
@@ -7150,6 +7462,5 @@ int main(int argc, int* argv) {
   initSelfie(argc, (int*) argv);
 
   initLibrary();
-
   return selfie();
 }
