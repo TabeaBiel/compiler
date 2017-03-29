@@ -4003,7 +4003,7 @@ void emitLeftShiftBy(int b) {
   // assert: 0 <= b < 15
   
   // Tabea hw3
-  emitRFormat(OP_SPECIAL, currentTemporary(), 0, currentTemporary(), b, FCT_SLL);
+  emitRFormat(OP_SPECIAL, 0, currentTemporary(), currentTemporary(), b, FCT_SLL);
   
   // load multiplication factor less than 2^15 to avoid sign extension
   //emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), twoToThePowerOf(b));
@@ -5678,7 +5678,7 @@ void fct_syscall() {
   }
 }
 
-/*void fct_nop() {
+void fct_nop() {
   if (debug) {
     printFunction(function);
     println();
@@ -5686,7 +5686,7 @@ void fct_syscall() {
 
   if (interpret)
     pc = pc + WORDSIZE;
-}*/
+}
 
 void op_jal() {
   if (debug) {
@@ -6104,7 +6104,7 @@ void fct_sll() {
   int isNop;
   isNop = 0;
   
-  if(rs == 0) 
+  if(rd == 0) 
     if(rt == 0)
       if(shamt == 0)
         isNop = 1;
@@ -6112,33 +6112,30 @@ void fct_sll() {
     if(debug) {
       if(isNop) {
         print((int*) "nop");
-        println();
-      } else {
-      printFunction(function);
-      print((int*) " ");
-      printRegister(rs);
-      print((int*) ", ");
-      printRegister(rt);
-      print((int*) ", ");
-      printRegister(rd);
-      print((int*) ", ");
-      printInteger(shamt);
+      }else {
+        printFunction(function);
+        print((int*) " ");
+        printRegister(rd);
+        print((int*) ",");
+        printRegister(rt);
+        print((int*) ",");
+        printInteger(shamt);
+      
       }
       
       if(interpret) {
         print((int*) ": ");
         printRegister(rd);
         print((int*) "=");
-        print((int*) *(registers+rd));
+        printInteger(*(registers+rd));
         print((int*) ", ");
-        printRegister(rt);
-        print((int*) "=");
-        print((int*) *(registers + rs));
+        print((int*) "shamt=");
+        printInteger(shamt);
       }
     }
     
     if(interpret) {
-      *(registers + rd) = leftShift(*(registers + rs), shamt);
+      *(registers + rd) = leftShift(*(registers + rt), shamt);
       
       pc = pc + WORDSIZE;
     }
@@ -6148,7 +6145,7 @@ void fct_sll() {
         print((int*) " -> ");
         printRegister(rd);
         print((int*) "=");
-        print((int*) *(registers + rd));
+        printInteger(*(registers + rd));
         println();
       }
     }
@@ -6161,7 +6158,7 @@ void fct_sllv() {
   int isNop;
   isNop = 0;
   
-  if(rs == 0) 
+  if(rd == 0) 
     if(rt == 0)
       if(shamt == 0)
         isNop = 1;
@@ -6169,17 +6166,14 @@ void fct_sllv() {
     if(debug) {
       if(isNop) {
         print((int*) "nop");
-        println();
-      } else {
-      printFunction(function);
-      print((int*) " ");
-      printRegister(rs);
-      print((int*) ", ");
-      printRegister(rt);
-      print((int*) ", ");
-      printRegister(rd);
-      print((int*) ", ");
-      printInteger(shamt);
+      }else {
+        printFunction(function);
+        print((int*) " ");
+        printRegister(rd);
+        print((int*) ",");
+        printRegister(rt);
+        print((int*) ",");
+        printInteger(shamt);
       }
       
       if(interpret) {
@@ -6188,14 +6182,13 @@ void fct_sllv() {
         print((int*) "=");
         print((int*) *(registers+rd));
         print((int*) ", ");
-        printRegister(rt);
-        print((int*) "=");
-        print((int*) *(registers + rs));
+        print((int*) "shamt=");
+        printInteger(shamt);
       }
     }
     
     if(interpret) {
-      *(registers + rd) = leftShift(*(registers + rs), *(registers + rt));
+      *(registers + rd) = leftShift(*(registers + rt), *(registers + rs));
       
       pc = pc + WORDSIZE;
     }
@@ -6216,7 +6209,7 @@ void fct_srl() {
   int isNop;
   isNop = 0;
   
-  if(rs == 0) 
+  if(rd == 0) 
     if(rt == 0)
       if(shamt == 0)
         isNop = 1;
@@ -6224,17 +6217,14 @@ void fct_srl() {
     if(debug) {
       if(isNop) {
         print((int*) "nop");
-        println();
-      } else {
-      printFunction(function);
-      print((int*) " ");
-      printRegister(rs);
-      print((int*) ", ");
-      printRegister(rt);
-      print((int*) ", ");
-      printRegister(rd);
-      print((int*) ", ");
-      printInteger(shamt);
+      }else {
+        printFunction(function);
+        print((int*) " ");
+        printRegister(rd);
+        print((int*) ",");
+        printRegister(rt);
+        print((int*) ",");
+        printInteger(shamt);
       }
       
       if(interpret) {
@@ -6243,14 +6233,13 @@ void fct_srl() {
         print((int*) "=");
         print((int*) *(registers+rd));
         print((int*) ", ");
-        printRegister(rt);
-        print((int*) "=");
-        print((int*) *(registers + rs));
+        print((int*) "shamt=");
+        printInteger(shamt);
       }
     }
     
     if(interpret) {
-      *(registers + rd) = rightShift(*(registers + rs), shamt);
+      *(registers + rd) = rightShift(*(registers + rt), shamt);
       
       pc = pc + WORDSIZE;
     }
@@ -6271,7 +6260,7 @@ void fct_srlv() {
   int isNop;
   isNop = 0;
   
-  if(rs == 0) 
+  if(rd == 0) 
     if(rt == 0)
       if(shamt == 0)
         isNop = 1;
@@ -6279,17 +6268,14 @@ void fct_srlv() {
     if(debug) {
       if(isNop) {
         print((int*) "nop");
-        println();
-      } else {
-      printFunction(function);
-      print((int*) " ");
-      printRegister(rs);
-      print((int*) ", ");
-      printRegister(rt);
-      print((int*) ", ");
-      printRegister(rd);
-      print((int*) ", ");
-      printInteger(shamt);
+      }else {
+        printFunction(function);
+        print((int*) " ");
+        printRegister(rd);
+        print((int*) ",");
+        printRegister(rt);
+        print((int*) ",");
+        printInteger(shamt);
       }
       
       if(interpret) {
@@ -6298,14 +6284,14 @@ void fct_srlv() {
         print((int*) "=");
         print((int*) *(registers+rd));
         print((int*) ", ");
-        printRegister(rt);
+        print((int*) "shamt=");
+        printInteger(shamt);
         print((int*) "=");
-        print((int*) *(registers + rs));
       }
     }
     
     if(interpret) {
-      *(registers + rd) = rightShift(*(registers + rs), *(registers + rt));
+      *(registers + rd) = rightShift(*(registers + rt), *(registers + rs));
       
       pc = pc + WORDSIZE;
     }
