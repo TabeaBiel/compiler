@@ -7396,6 +7396,7 @@ void printUsage() {
 
 int selfie() {
   int* option;
+  println();
   print((int*) "This is Tabea Biel's selfie");
   println();
   
