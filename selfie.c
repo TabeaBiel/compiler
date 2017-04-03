@@ -2521,6 +2521,15 @@ int isComparison() {
   else
     return 0;
 }
+// Tabea hw4
+int isShiftSymbol(){
+  if(symbol == SYM_LEFTSHIFT)
+    return 1;
+  else if(symbol == SYM_RIGHTSHIFT)
+    return 1;
+  else
+    return 0;
+}
 
 int lookForFactor() {
   if (symbol == SYM_LPARENTHESIS)
@@ -3201,18 +3210,8 @@ int gr_simpleExpression() {
 
   return ltype;
 }
-//////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
 // Tabea hw4
-int isShiftSymbol(){
-  if(symbol == SYM_LEFTSHIFT){
-    return 1;
-  }else if(symbol == SYM_RIGHTSHIFT){
-    return 1;
-  }else{
-    return 0;
-  }
-}
-
 int gr_shiftExpression(){ 
   int ltype;
   int operatorSymbol;
@@ -3220,8 +3219,8 @@ int gr_shiftExpression(){
 
   ltype = gr_simpleExpression();
 
-  // << or >>
-  while(isShiftSymbol()){
+  // optional: <<, >>
+  if(isShiftSymbol()){
     operatorSymbol = symbol;
 
     getSymbol();
@@ -3242,7 +3241,7 @@ int gr_shiftExpression(){
 
   return ltype;
 }
-//////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
 
 int gr_expression() {
   int ltype;
@@ -3298,6 +3297,11 @@ int gr_expression() {
       emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SLT);
 
       tfree(1);
+    } else if(operatorSymbol == SYM_LEFTSHIFT){
+
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLLV);
+      
+      tfree(1);
 
     } else if (operatorSymbol == SYM_GT) {
       // set to 1 if b < a, else 0
@@ -3305,6 +3309,11 @@ int gr_expression() {
       emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLT);
 
       tfree(1);
+    } else if(operatorSymbol == SYM_RIGHTSHIFT){
+
+        emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SRLV);
+        
+        tfree(1);
 
     } else if (operatorSymbol == SYM_LEQ) {
       // if b < a set 0, else 1
