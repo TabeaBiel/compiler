@@ -228,7 +228,9 @@ void initLibrary() {
 
   // compute INT_MAX and INT_MIN without integer overflows
   INT_MAX = (twoToThePowerOf(30) - 1) * 2 + 1;
-  INT_MIN = -INT_MAX - 1;
+  //hw5
+  //INT_MIN = -INT_MAX - 1;
+  INT_MIN = ~INT_MAX;
 
   INT16_MAX = twoToThePowerOf(15) - 1;
   INT16_MIN = -INT16_MAX - 1;
@@ -743,7 +745,7 @@ int OP_ORI     = 0b001101; // 13
 int* OPCODES; // strings representing MIPS opcodes
 
 // Tabea hw3
-//int FCT_NOP     = 0x0;
+int FCT_NOP     = 0x0;
 int FCT_JR      = 0x8;
 int FCT_SYSCALL = 0xc;
 int FCT_MFHI    = 0x10;
@@ -812,8 +814,8 @@ void initDecoder() {
   // Tabea hw3
    *(FUNCTIONS + FCT_SLL)     = (int) "sll";
    *(FUNCTIONS + FCT_SRL)     = (int) "srl";
-   *(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
    *(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
+   *(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
    // hw 5
    *(FUNCTIONS + FCT_AND)     = (int) "and";
    *(FUNCTIONS + FCT_OR)      = (int) "or";
@@ -1020,7 +1022,7 @@ void initMemory(int megabytes) {
 
 void fct_syscall();
 // Tabea hw3
-//void fct_nop();
+void fct_nop();
 void op_jal();
 void op_j();
 void op_beq();
@@ -1039,9 +1041,9 @@ void op_sw();
 
 // Tabea hw3
 void fct_sll();
+void fct_srl();
 void fct_sllv();
 void fct_srlv();
-void fct_srl();
 //hw 5
 void fct_and();
 void op_andi();
@@ -1396,7 +1398,9 @@ int loadCharacter(int* s, int i) {
 
   // shift to-be-loaded character to the left resetting all bits to the left
   // then shift to-be-loaded character all the way to the right and return
-  return rightShift((*(s + a) << ((SIZEOFINT - 1) - (i % SIZEOFINT)) * 8), (SIZEOFINT - 1) * 8);
+  //return rightShift((*(s + a) << ((SIZEOFINT - 1) - (i % SIZEOFINT)) * 8), (SIZEOFINT - 1) * 8);
+  return rightShift((*(s + a) & (0xFF << ((i % SIZEOFINT) * 8))), ((i % SIZEOFINT) * 8));
+
 }
 
 int* storeCharacter(int* s, int i, int c) {
@@ -1409,7 +1413,8 @@ int* storeCharacter(int* s, int i, int c) {
 
   // subtract the to-be-overwritten character resetting its bits in s
   // then add c setting its bits at the i-th position in s
-  *(s + a) = (*(s + a) - (loadCharacter(s, i) << (i % SIZEOFINT) * 8)) + (c << (i % SIZEOFINT) * 8);
+  //*(s + a) = (*(s + a) - (loadCharacter(s, i) << (i % SIZEOFINT) * 8)) + (c << (i % SIZEOFINT) * 8);
+  *(s + a) = *(s + a) & ~(0xFF << ((i % SIZEOFINT) * 8)) | (c << (i % SIZEOFINT) * 8);
 
   return s;
 }
@@ -4196,7 +4201,7 @@ void emitMainEntry() {
   // Tabea hw3 FCT_SLL statt FCT_NOP
   while (i < 16) {
     // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL);
+    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_NOP);
 
     i = i + 1;
   }
@@ -4439,7 +4444,7 @@ int encodeRFormat(int opcode, int rs, int rt, int rd, int shiftAmount, int funct
   // assert: 0 <= rt < 2^5
   // assert: 0 <= rd < 2^5
   // assert: 0 <= function < 2^6
-  return (((((opcode << 5) + rs << 5) + rt << 5) + rd << 5)+ shiftAmount << 6) + function;
+  return ((((opcode << 5 | rs) << 5 | rt) << 5 | rd) << 5 | shiftAmount) << 6 | function;
 }
 
 // -----------------------------------------------------------------
@@ -4458,7 +4463,7 @@ int encodeIFormat(int opcode, int rs, int rt, int immediate) {
     // convert from 32-bit to 16-bit two's complement
     immediate = immediate + twoToThePowerOf(16);
 
-  return (((opcode << 5) + rs << 5) + rt << 16) + immediate;
+  return ((opcode << 5 | rs) << 5 | rt) << 16 | immediate;
 }
 
 // --------------------------------------------------------------
@@ -4471,7 +4476,7 @@ int encodeIFormat(int opcode, int rs, int rt, int immediate) {
 int encodeJFormat(int opcode, int instr_index) {
   // assert: 0 <= opcode < 2^6
   // assert: 0 <= instr_index < 2^26
-  return (opcode << 26) + instr_index;
+  return (opcode << 26) | instr_index;
 }
 
 // -----------------------------------------------------------------
@@ -4483,27 +4488,27 @@ int getOpcode(int instruction) {
 }
 
 int getRS(int instruction) {
-  return rightShift((instruction << 6), 27);
+  return rightShift(instruction, 21) & 0b11111;
 }
 
 int getRT(int instruction) {
-  return rightShift((instruction << 11), 27);
+  return rightShift(instruction, 16) & 0b11111;
 }
 
 int getRD(int instruction) {
-  return rightShift((instruction << 16), 27);
+  return rightShift(instruction, 11) & 0b11111;
 }
 
 int getFunction(int instruction) {
-  return rightShift((instruction << 26), 26);
+  return instruction & 0b111111;
 }
 
 int getImmediate(int instruction) {
-  return rightShift((instruction << 16), 16);
+  return instruction & 0xFFFF;
 }
 
 int getInstrIndex(int instruction) {
-  return rightShift((instruction << 6), 6);
+  return instruction & 0x3FFFFFF;
 }
 
 int signExtend(int immediate) {
@@ -4515,7 +4520,7 @@ int signExtend(int immediate) {
 }
 
 int getShamt(int instruction){
-  return rightShift((instruction << 21), 27);
+  return rightShift(instruction, 6) & 0b11111;
 }
 
 // --------------------------------------------------------------
@@ -4622,7 +4627,7 @@ void emitRFormat(int opcode, int rs, int rt, int rd, int shamt, int function) {
     if (function == FCT_JR)
       // Tabea hw3 FCT_SLL statt FCT_NOP
       // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // delay slot
+      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_NOP); // delay slot
     else if (function == FCT_MFLO) {
       // In MIPS I-III two instructions after MFLO/MFHI
       // must not modify the LO/HI registers
@@ -4649,18 +4654,18 @@ void emitIFormat(int opcode, int rs, int rt, int immediate) {
   if (opcode == OP_BEQ)
     // Tabea hw3 FCT_SLL statt FCT_NOP
     // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // delay slot
+    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_NOP); // delay slot
   else if (opcode == OP_BNE)
     // Tabea hw3 FCT_SLL statt FCT_NOP
     // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // delay slot
+    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_NOP); // delay slot
 }
 
 void emitJFormat(int opcode, int instr_index) {
   emitInstruction(encodeJFormat(opcode, instr_index));
 // Tabea hw3 FCT_SLL statt FCT_NOP
   // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // delay slot
+  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_NOP); // delay slot
 }
 
 void fixup_relative(int fromAddress) {
@@ -5847,7 +5852,7 @@ void fct_syscall() {
 
 void fct_nop() {
   if (debug) {
-    printFunction(function);
+    print((int*)"nop");
     println();
   }
 
@@ -6014,6 +6019,19 @@ void op_bne() {
     }
     println();
   }
+}
+
+int isNop(){
+  if(rd == REG_ZR){
+    if(rt == REG_ZR){
+      if(shamt == 0)
+        return 1;
+      else
+        return 0;
+    }else
+      return 0;
+  }else
+    return 0;
 }
 
 void op_addiu() {
@@ -6267,39 +6285,29 @@ void fct_addu() {
 
 // Tabea hw3
 void fct_sll() {
-
-  int isNop;
-  isNop = 0;
-  
-  if(rd == 0) 
-    if(rt == 0)
-      if(shamt == 0)
-        isNop = 1;
-      
-    if(debug) {
-      if(isNop) {
-        print((int*) "nop");
-      }else {
-        printFunction(function);
-        print((int*) " ");
-        printRegister(rd);
-        print((int*) ",");
-        printRegister(rt);
-        print((int*) ",");
-        printInteger(shamt);
-      
-      }
-      
-      if(interpret) {
-        print((int*) ": ");
-        printRegister(rd);
-        print((int*) "=");
-        printInteger(*(registers+rd));
-        print((int*) ", ");
-        print((int*) "shamt=");
-        printInteger(shamt);
-      }
+  if(isNop()){
+    fct_nop();
+  }else {
+    if (debug){
+      printFunction(function);
+      print((int*) " ");
+      printRegister(rd);
+      print((int*) ",");
+      printRegister(rt);
+      print((int*) ",");
+      printInteger(shamt);
+        
+    if(interpret) {
+      print((int*) ": ");
+      printRegister(rd);
+      print((int*) "=");
+      printInteger(*(registers+rd));
+      print((int*) ", ");
+      print((int*) "shamt=");
+      printInteger(shamt);
     }
+  }
+
     
     if(interpret) {
       *(registers + rd) = (*(registers + rt) << shamt);
@@ -6316,94 +6324,30 @@ void fct_sll() {
         println();
       }
     }
-
+  }
 }
 
-// Tabea hw3
-void fct_sllv() {
-  
-  int isNop;
-  isNop = 0;
-  
-  if(rd == 0) 
-    if(rt == 0)
-      if(shamt == 0)
-        isNop = 1;
-      
-    if(debug) {
-      if(isNop) {
-        print((int*) "nop");
-      }else {
-        printFunction(function);
-        print((int*) " ");
-        printRegister(rd);
-        print((int*) ",");
-        printRegister(rt);
-        print((int*) ",");
-        printInteger(shamt);
-      }
-      
-      if(interpret) {
-        print((int*) ": ");
-        printRegister(rd);
-        print((int*) "=");
-        print((int*) *(registers+rd));
-        print((int*) ", ");
-        print((int*) "shamt=");
-        printInteger(shamt);
-      }
-    }
-    
-    if(interpret) {
-      *(registers + rd) = (*(registers + rt) << *(registers + rs));
-      
-      pc = pc + WORDSIZE;
-    }
-    
-    if(debug) {
-      if(interpret) {
-        print((int*) " -> ");
-        printRegister(rd);
-        print((int*) "=");
-        print((int*) *(registers + rd));
-      }
-    }
-}
-
-// Tabea hw3
 void fct_srl() {
   
-  int isNop;
-  isNop = 0;
-  
-  if(rd == 0) 
-    if(rt == 0)
-      if(shamt == 0)
-        isNop = 1;
+  if (debug) {
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rd);
+    print((int*) ",");
+    printRegister(rt);
+    print((int*) ",");
+    printInteger(shamt);
       
-    if(debug) {
-      if(isNop) {
-        print((int*) "nop");
-      }else {
-        printFunction(function);
-        print((int*) " ");
-        printRegister(rd);
-        print((int*) ",");
-        printRegister(rt);
-        print((int*) ",");
-        printInteger(shamt);
-      }
-      
-      if(interpret) {
-        print((int*) ": ");
-        printRegister(rd);
-        print((int*) "=");
-        print((int*) *(registers+rd));
-        print((int*) ", ");
-        print((int*) "shamt=");
-        printInteger(shamt);
-      }
+  if(interpret) {
+    print((int*) ": ");
+    printRegister(rd);
+    print((int*) "=");
+    print((int*) *(registers+rd));
+    print((int*) ", ");
+    print((int*) "shamt=");
+    printInteger(shamt);
     }
+  }
     
     if(interpret) {
       *(registers + rd) = rightShift(*(registers + rt), shamt);
@@ -6416,61 +6360,96 @@ void fct_srl() {
         print((int*) " -> ");
         printRegister(rd);
         print((int*) "=");
-        print((int*) *(registers + rd));
+        printInteger(*(registers + rd));
       }
     }
+}
+// Tabea hw3
+void fct_sllv() {
+  
+  if (debug) {
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rd);
+    print((int*) ",");
+    printRegister(rt);
+    print((int*) ",");
+    printRegister(rs);
+    if (interpret) {
+      print((int*) ": ");
+      printRegister(rd);
+      print((int*) "=");
+      printInteger(*(registers+rd));
+      print((int*) ",");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+      print((int*) ",");
+      printRegister(rs);
+      print((int*) "=");
+      printInteger(*(registers+rs));
+    }
+
+  }
+
+  if(interpret){
+    *(registers+rd) = *(registers+rt) << *(registers+rs);
+        pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rd);
+      print((int*) "=");
+      printInteger(*(registers+rd));
+    }
+    println();
+  }
 }
 
 // Tabea hw3
 void fct_srlv() {
   
-  int isNop;
-  isNop = 0;
-  
-  if(rd == 0) 
-    if(rt == 0)
-      if(shamt == 0)
-        isNop = 1;
-      
-    if(debug) {
-      if(isNop) {
-        print((int*) "nop");
-      }else {
-        printFunction(function);
-        print((int*) " ");
-        printRegister(rd);
-        print((int*) ",");
-        printRegister(rt);
-        print((int*) ",");
-        printInteger(shamt);
-      }
-      
-      if(interpret) {
-        print((int*) ": ");
-        printRegister(rd);
-        print((int*) "=");
-        print((int*) *(registers+rd));
-        print((int*) ", ");
-        print((int*) "shamt=");
-        printInteger(shamt);
-        print((int*) "=");
-      }
+  if (debug) {
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rd);
+    print((int*) ",");
+    printRegister(rt);
+    print((int*) ",");
+    printRegister(rs);
+    if (interpret) {
+      print((int*) ": ");
+      printRegister(rd);
+      print((int*) "=");
+      printInteger(*(registers+rd));
+      print((int*) ",");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+      print((int*) ",");
+      printRegister(rs);
+      print((int*) "=");
+      printInteger(*(registers+rs));
     }
-    
-    if(interpret) {
-      *(registers + rd) = rightShift(*(registers + rt), *(registers + rs));
-      
-      pc = pc + WORDSIZE;
+
+  }
+
+  if(interpret){
+    *(registers+rd) = rightShift(*(registers + rt), *(registers + rs));
+    pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rd);
+      print((int*) "=");
+      printInteger(*(registers+rd));
     }
-    
-    if(debug) {
-      if(interpret) {
-        print((int*) " -> ");
-        printRegister(rd);
-        print((int*) "=");
-        print((int*) *(registers + rd));
-      }
-    }
+    println();
+  }
 }
 
 // hw 5
