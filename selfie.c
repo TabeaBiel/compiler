@@ -153,6 +153,10 @@ int CHAR_EXCLAMATION  = '!';
 int CHAR_PERCENTAGE   = '%';
 int CHAR_SINGLEQUOTE  = 39; // ASCII code 39 = '
 int CHAR_DOUBLEQUOTE  = '"';
+// hw 5
+int CHAR_AND          = '&';
+int CHAR_OR           = '|';
+int CHAR_NOT          = '~';
 
 int SIZEOFINT     = 4; // must be the same as WORDSIZE
 int SIZEOFINTSTAR = 4; // must be the same as WORDSIZE
@@ -318,6 +322,10 @@ int SYM_STRING       = 27; // string
 // Tabea hw4
 int SYM_LEFTSHIFT    = 28; // <<
 int SYM_RIGHTSHIFT   = 29; // >>
+// hw 5
+int SYM_BITWISE_AND  = 30; // &
+int SYM_BITWISE_OR   = 31; // |
+int SYM_BITWISE_NOT  = 32; // ~
 
 int* SYMBOLS; // strings representing symbols
 
@@ -354,8 +362,8 @@ int  sourceFD   = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-  // Tabea hw4 malloc auf 30 statt 28 wegen >> und <<
-  SYMBOLS = malloc(30 * SIZEOFINTSTAR);
+  // Tabea hw4 & hw 5 malloc auf 30 & 33 statt 28 wegen >> und <<
+  SYMBOLS = malloc(33 * SIZEOFINTSTAR);
 
   *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
   *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
@@ -388,6 +396,10 @@ void initScanner () {
   // Tabea hw4
   *(SYMBOLS + SYM_LEFTSHIFT)    = (int) "<<";
   *(SYMBOLS + SYM_RIGHTSHIFT)   = (int) ">>";
+  // hw 5
+  *(SYMBOLS + SYM_BITWISE_AND)  = (int) "&";
+  *(SYMBOLS + SYM_BITWISE_OR)   = (int) "|";
+  *(SYMBOLS + SYM_BITWISE_NOT)  = (int) "~";
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -531,6 +543,7 @@ int  gr_factor();
 int  gr_term();
 int  gr_simpleExpression();
 int  gr_shiftExpression();
+int  gr_comparisonExpression();
 int  gr_expression();
 void gr_while();
 void gr_if();
@@ -713,14 +726,19 @@ void printFunction(int function);
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
-int OP_SPECIAL = 0x0;
-int OP_J       = 0x2;
-int OP_JAL     = 0x3;
-int OP_BEQ     = 0x4;
-int OP_BNE     = 0x5;
-int OP_ADDIU   = 0x9;
-int OP_LW      = 0x23;
-int OP_SW      = 0x2b;
+int OP_SPECIAL = 0x0; // hex 0
+int OP_J       = 0x2; // hex 2
+int OP_JAL     = 0x3; // hex 3
+int OP_BEQ     = 0x4; // hex 4
+int OP_BNE     = 0x5; // hex 5
+int OP_ADDIU   = 0x9; // hex 9
+int OP_LW      = 0x23; // hex 35
+int OP_SW      = 0x2b; // hex 43
+
+// hw 5
+int OP_ANDI    = 0b001100; // 12
+int OP_ORI     = 0b001101; // 13
+
 
 int* OPCODES; // strings representing MIPS opcodes
 
@@ -741,6 +759,10 @@ int FCT_SLL = 0x0;
 int FCT_SRL = 0x2;
 int FCT_SLLV = 0x4;
 int FCT_SRLV = 0x6;
+// hw 5
+int FCT_AND     = 0b100100; // 36
+int FCT_OR      = 0b100101; // 37
+int FCT_NOR     = 0b100111; // 39
 
 int* FUNCTIONS; // strings representing MIPS functions
 
@@ -769,6 +791,9 @@ void initDecoder() {
   *(OPCODES + OP_ADDIU)   = (int) "addiu";
   *(OPCODES + OP_LW)      = (int) "lw";
   *(OPCODES + OP_SW)      = (int) "sw";
+  // hw 5
+  *(OPCODES + OP_ANDI)    = (int) "andi";
+  *(OPCODES + OP_ORI)     = (int) "ori";
 
   FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
 
@@ -787,8 +812,12 @@ void initDecoder() {
   // Tabea hw3
    *(FUNCTIONS + FCT_SLL)     = (int) "sll";
    *(FUNCTIONS + FCT_SRL)     = (int) "srl";
-   *(FUNCTIONS + FCT_SRLV)     = (int) "srlv";
-   *(FUNCTIONS + FCT_SLLV)     = (int) "sllv";
+   *(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
+   *(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
+   // hw 5
+   *(FUNCTIONS + FCT_AND)     = (int) "and";
+   *(FUNCTIONS + FCT_OR)      = (int) "or";
+   *(FUNCTIONS + FCT_NOR)     = (int) "nor";
 }
 
 // -----------------------------------------------------------------
@@ -1013,6 +1042,12 @@ void fct_sll();
 void fct_sllv();
 void fct_srlv();
 void fct_srl();
+//hw 5
+void fct_and();
+void op_andi();
+void fct_or();
+void op_ori();
+void fct_nor();
 
 // -----------------------------------------------------------------
 // -------------------------- INTERPRETER --------------------------
@@ -2310,6 +2345,20 @@ void getSymbol() {
         getCharacter();
 
         symbol = SYM_MOD;
+      // hw 5
+      } else if (character == CHAR_AND){
+        getCharacter();
+        
+        symbol = SYM_BITWISE_AND;
+
+      } else if (character == CHAR_NOT){
+          getCharacter();
+
+          symbol = SYM_BITWISE_NOT;
+      } else if (character == CHAR_OR){
+          getCharacter();
+
+          symbol = SYM_BITWISE_OR;
 
       } else {
         printLineNumber((int*) "error", lineNumber);
@@ -3135,15 +3184,23 @@ int gr_term() {
 
 int gr_simpleExpression() {
   int sign;
+  int not;
   int ltype;
   int operatorSymbol;
   int rtype;
 
   // assert: n = allocatedTemporaries
 
+  // hw 5
+  if (symbol == SYM_BITWISE_NOT){
+    sign = 0;
+    not = 1;
+    getSymbol();
+
   // optional: -
-  if (symbol == SYM_MINUS) {
+  }else if (symbol == SYM_MINUS) {
     sign = 1;
+    not = 0;
 
     mayBeINTMIN = 1;
     isINTMIN    = 0;
@@ -3159,9 +3216,10 @@ int gr_simpleExpression() {
       // even though 0-INT_MIN == INT_MIN
       sign = 0;
     }
-  } else
+  } else{
     sign = 0;
-
+    not = 0;
+  }
   ltype = gr_term();
 
   // assert: allocatedTemporaries == n + 1
@@ -3176,6 +3234,11 @@ int gr_simpleExpression() {
     emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), 0, FCT_SUBU);
   }
 
+  // hw 5
+  if (not){
+    emitRFormat(OP_SPECIAL, currentTemporary(), REG_ZR, currentTemporary(), 0, FCT_NOR);
+  }
+  
   // + or -?
   while (isPlusOrMinus()) {
     operatorSymbol = symbol;
@@ -3243,13 +3306,14 @@ int gr_shiftExpression(){
 }
 ///////////////////////////////////////////////////////////////////////
 
-int gr_expression() {
+// hw 5
+int gr_comparisonExpression() {
   int ltype;
   int operatorSymbol;
   int rtype;
 
   // assert: n = allocatedTemporaries
-  // Tabea hw4
+
   ltype = gr_shiftExpression();
 
   // assert: allocatedTemporaries == n + 1
@@ -3259,7 +3323,7 @@ int gr_expression() {
     operatorSymbol = symbol;
 
     getSymbol();
-    // Tabea hw4
+
     rtype = gr_shiftExpression();
 
     // assert: allocatedTemporaries == n + 2
@@ -3269,7 +3333,8 @@ int gr_expression() {
 
     if (operatorSymbol == SYM_EQUALITY) {
       // subtract, if result = 0 then 1, else 0
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+
+
       emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SUBU);
 
       tfree(1);
@@ -3281,7 +3346,8 @@ int gr_expression() {
 
     } else if (operatorSymbol == SYM_NOTEQ) {
       // subtract, if result = 0 then 0, else 1
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+
+
       emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SUBU);
 
       tfree(1);
@@ -3293,31 +3359,24 @@ int gr_expression() {
 
     } else if (operatorSymbol == SYM_LT) {
       // set to 1 if a < b, else 0
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+
+
       emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SLT);
 
-      tfree(1);
-    } else if(operatorSymbol == SYM_LEFTSHIFT){
-
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLLV);
-      
       tfree(1);
 
     } else if (operatorSymbol == SYM_GT) {
       // set to 1 if b < a, else 0
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+
+
       emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLT);
 
       tfree(1);
-    } else if(operatorSymbol == SYM_RIGHTSHIFT){
-
-        emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SRLV);
-        
-        tfree(1);
 
     } else if (operatorSymbol == SYM_LEQ) {
       // if b < a set 0, else 1
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+
+
       emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLT);
 
       tfree(1);
@@ -3329,7 +3388,8 @@ int gr_expression() {
 
     } else if (operatorSymbol == SYM_GEQ) {
       // if a < b set 0, else 1
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
+
+
       emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SLT);
 
       tfree(1);
@@ -3346,6 +3406,59 @@ int gr_expression() {
   return ltype;
 }
 
+int isBitwiseAndOr(){
+  if(symbol == SYM_BITWISE_AND){
+    return 1;
+  }else if(symbol == SYM_BITWISE_OR){
+    return 1;
+  }else{
+    return 0;
+  }
+}
+///////////////////////////////////////////////////////////////////////////
+// hw 5
+int gr_expression() {
+  int ltype;
+  int operatorSymbol;
+  int rtype;
+
+  // assert: n = allocatedTemporaries
+
+  ltype = gr_comparisonExpression();
+
+  // assert: allocatedTemporaries == n + 1
+
+  //optional: ==, !=, <, >, <=, >= simpleExpression
+  while (isBitwiseAndOr()) { //davor if
+    operatorSymbol = symbol;
+
+    getSymbol();
+
+    rtype = gr_comparisonExpression();
+
+    // assert: allocatedTemporaries == n + 2
+
+    //if (ltype != rtype)
+      //typeWarning(ltype, rtype);
+
+    if (operatorSymbol == SYM_BITWISE_AND) {
+
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_AND);
+
+    } else if (operatorSymbol == SYM_BITWISE_OR) {
+
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_OR);
+
+    }
+  
+  tfree(1);
+ }
+
+  // assert: allocatedTemporaries == n + 1
+
+  return ltype;
+}
+///////////////////////////////////////////////////////////////////////////
 void gr_while() {
   int brBackToWhile;
   int brForwardToEnd;
@@ -6360,6 +6473,222 @@ void fct_srlv() {
     }
 }
 
+// hw 5
+void fct_and(){
+  if (debug) {
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rd);
+    print((int*) ",");
+    printRegister(rs);
+    print((int*) ",");
+    printRegister(rt);
+    if (interpret) {
+      print((int*) ": ");
+      printRegister(rd);
+      print((int*) "=");
+      printInteger(*(registers+rd));
+      print((int*) ",");
+      printRegister(rs);
+      print((int*) "=");
+      printInteger(*(registers+rs));
+      print((int*) ",");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+    }
+  }
+
+  if (interpret) {
+    *(registers+rd) = *(registers+rs) & *(registers+rt);
+
+    pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rd);
+      print((int*) "=");
+      printInteger(*(registers+rd));
+    }
+    println();
+  }
+
+}
+
+// hw 5
+void op_andi() {
+  if (debug) {
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rt);
+    print((int*) ",");
+    printRegister(rs);
+    print((int*) ",");
+    printInteger(immediate);
+    if (interpret) {
+      print((int*) ": ");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+      print((int*) ",");
+      printRegister(rs);
+      print((int*) "=");
+      printInteger(*(registers+rs));
+      print((int*) ",");
+      print((int*)"immediate:");
+      print((int*) "=");
+      printInteger(immediate);
+    }
+  }
+
+  if (interpret) {
+    *(registers+rt) = *(registers+rs) & signExtend(immediate);
+
+    pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+    }
+    println();
+  }
+}
+
+// hw 5
+void fct_or(){
+  if (debug) {
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rd);
+    print((int*) ",");
+    printRegister(rs);
+    print((int*) ",");
+    printRegister(rt);
+    if (interpret) {
+      print((int*) ": ");
+      printRegister(rd);
+      print((int*) "=");
+      printInteger(*(registers+rd));
+      print((int*) ",");
+      printRegister(rs);
+      print((int*) "=");
+      printInteger(*(registers+rs));
+      print((int*) ",");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+    }
+  }
+
+  if (interpret) {
+    *(registers+rd) = *(registers+rs) | *(registers+rt);
+
+    pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+    }
+    println();
+  }
+}
+
+// hw 5
+void op_ori(){
+  if (debug) {
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rt);
+    print((int*) ",");
+    printRegister(rs);
+    print((int*) ",");
+    printInteger(immediate);
+    if (interpret) {
+      print((int*) ": ");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+      print((int*) ",");
+      printRegister(rs);
+      print((int*) "=");
+      printInteger(*(registers+rs));
+      print((int*) ",");
+      print((int*)"immediate:");
+      print((int*) "=");
+      printInteger(immediate);
+    }
+  }
+
+  if(interpret){
+    *(registers+rt) = *(registers+rs) | signExtend(immediate);
+
+    pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+    }
+    println();
+  }
+}
+
+// hw 5
+void fct_nor(){
+  if (debug) {
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rd);
+    print((int*) ",");
+    printRegister(rs);
+    print((int*) ",");
+    printRegister(rt);
+    if (interpret) {
+      print((int*) ": ");
+      printRegister(rd);
+      print((int*) "=");
+      printInteger(*(registers+rd));
+      print((int*) ",");
+      printRegister(rs);
+      print((int*) "=");
+      printInteger(*(registers+rs));
+      print((int*) ",");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+    }
+  }
+
+  if(interpret){
+    *(registers+rd) = ~(*(registers+rs) | *(registers+rt));
+
+    pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rd);
+      print((int*) "=");
+      printInteger(*(registers+rd));
+    }
+    println();
+  }
+}
+
 void fct_subu() {
   if (debug) {
     printFunction(function);
@@ -6671,6 +7000,13 @@ void execute() {
       fct_sllv();
     else if (function == FCT_SRL)
       fct_srl();
+    // hw 5
+    else if (function == FCT_AND)
+      fct_and();
+    else if (function == FCT_OR)
+      fct_or();
+    else if (function == FCT_NOR)
+      fct_nor();
     else
       throwException(EXCEPTION_UNKNOWNINSTRUCTION, 0);
   } else if (opcode == OP_ADDIU)
@@ -6687,6 +7023,11 @@ void execute() {
     op_jal();
   else if (opcode == OP_J)
     op_j();
+  // hw 5
+  else if (opcode == OP_ANDI)
+    op_andi();
+  else if (opcode == OP_ORI)
+    op_ori();
   else
     throwException(EXCEPTION_UNKNOWNINSTRUCTION, 0);
 }
