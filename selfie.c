@@ -3175,13 +3175,12 @@ int gr_term() {
   // hw 6
   int lVal;
   int lConstant;
-
   lVal = 0;
   lConstant = 0;
   // assert: n = allocatedTemporaries
 
   ltype = gr_factor();
-
+//////////////////////////////////////////////////////////////
   // hw 6
   if(currConstant){
     lVal = currVal;
@@ -3189,6 +3188,7 @@ int gr_term() {
   }
   currConstant = 0;
   currVal = 0;
+//////////////////////////////////////////////////////////////
 
   // assert: allocatedTemporaries == n + 1
 
@@ -3201,7 +3201,7 @@ int gr_term() {
     rtype = gr_factor();
 
     // assert: allocatedTemporaries == n + 2
-
+    // hw 6
     if (ltype != rtype)
       typeWarning(ltype, rtype);
 
@@ -3212,12 +3212,7 @@ int gr_term() {
         }else if(operatorSymbol == SYM_DIV){ 
           lVal = lVal / currVal;
         }else if (operatorSymbol == SYM_MOD){ 
-          load_integer(lVal);
-          load_integer(currVal);
-          lVal = 0;
-          lConstant = 0;
-          currVal = 0;
-          currConstant = 0;
+          lVal = lVal % currVal;
         }
     
       }else { 
@@ -3288,6 +3283,7 @@ int gr_term() {
     currConstant = 0;
   }
   return ltype;
+  // hw 6 bis hier neu
 }
 
 int gr_simpleExpression() {
@@ -3333,12 +3329,13 @@ int gr_simpleExpression() {
     not = 0;
   }
   ltype = gr_term();
-
+//////////////////////////////////////////////////////////////
   // hw 6
   if (currConstant) { //int
     lVal = currVal;
     lConstant = currConstant;
   }
+//////////////////////////////////////////////////////////////
 
   // assert: allocatedTemporaries == n + 1
 
@@ -3356,7 +3353,7 @@ int gr_simpleExpression() {
       emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), 0, FCT_SUBU);
     }
   }
-
+// hw 6
   currConstant = 0;
   currVal = 0;
 
@@ -3373,33 +3370,29 @@ int gr_simpleExpression() {
 
     rtype = gr_term();
 
-    //Assignment6
-    if (lConstant) { //int
-      if(currConstant) { 
-          //const + const 
-          if (operatorSymbol == SYM_PLUS) { 
+    // hw 6
+    if (lConstant){
+      if(currConstant){ 
+          if(operatorSymbol == SYM_PLUS){ 
             lVal = lVal + currVal;
-      //const - const 
-          } else if (operatorSymbol == SYM_MINUS) { 
+          }else if(operatorSymbol == SYM_MINUS){ 
             lVal = lVal - currVal;
           }
       
-      } else { 
-      //const+var 
+      }else{ 
         load_integer(lVal);
       
-        if (operatorSymbol == SYM_PLUS) {
-          if (ltype == INTSTAR_T) {
-            if (rtype == INT_T)
-              // pointer arithmetic: factor of 2^2 of integer operand
+        if(operatorSymbol == SYM_PLUS){
+          if(ltype == INTSTAR_T){
+            if(rtype == INT_T)
               emitLeftShiftBy(2);
-          } else if (rtype == INTSTAR_T)
+          }else if(rtype == INTSTAR_T)
             typeWarning(ltype, rtype);
 
           emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(),0, FCT_ADDU);
           
-        } else if (operatorSymbol == SYM_MINUS) { 
-          if (ltype != rtype)
+        } else if(operatorSymbol == SYM_MINUS) { 
+          if(ltype != rtype)
             typeWarning(ltype, rtype);
 
           emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(),0, FCT_SUBU);
@@ -3409,54 +3402,45 @@ int gr_simpleExpression() {
 
         lConstant = 0;
       }
-    } else { //var
-      if(currConstant) {
+    } else{ 
+      if(currConstant){
         load_integer(currVal);
 
-    // var + const 
-        if (operatorSymbol == SYM_PLUS) { 
-          if (ltype == INTSTAR_T) {
-            if (rtype == INT_T)
-              // pointer arithmetic: factor of 2^2 of integer operand
+        if(operatorSymbol == SYM_PLUS){ 
+          if(ltype == INTSTAR_T){
+            if(rtype == INT_T)
               emitLeftShiftBy(2);
-          } else if (rtype == INTSTAR_T)
+          }else if (rtype == INTSTAR_T)
             typeWarning(ltype, rtype);
 
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_ADDU);
          
-        // var - const     
-        } else if (operatorSymbol == SYM_MINUS) { 
-          if (ltype != rtype)
+        }else if (operatorSymbol == SYM_MINUS){ 
+          if(ltype != rtype)
             typeWarning(ltype, rtype);
 
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_SUBU);
-          
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_SUBU);   
         }
         tfree(1);
-
         lConstant = 0;
-      } else { 
-      //var+var
-        if (operatorSymbol == SYM_PLUS) { 
-          if (ltype == INTSTAR_T) {
-            if (rtype == INT_T)
-              // pointer arithmetic: factor of 2^2 of integer operand
+      }else{ 
+        if(operatorSymbol == SYM_PLUS){ 
+          if(ltype == INTSTAR_T) {
+            if(rtype == INT_T)
               emitLeftShiftBy(2);
-          } else if (rtype == INTSTAR_T)
+          }else if (rtype == INTSTAR_T)
             typeWarning(ltype, rtype);
 
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_ADDU);
           
-    // var - var 
-        } else if (operatorSymbol == SYM_MINUS) { 
-          if (ltype != rtype)
+        }else if(operatorSymbol == SYM_MINUS) { 
+          if(ltype != rtype)
             typeWarning(ltype, rtype);
 
           emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_SUBU);
           
         }
         tfree(1);
-
         lConstant = 0;
       }
     }
@@ -3466,18 +3450,17 @@ int gr_simpleExpression() {
 
   }
 
-  // assert: allocatedTemporaries == n + 1
-
-  if (lConstant) { //int
+  if(lConstant){ 
     currConstant = 1;
     currVal = lVal;
-  } else { //var
+  }else{
     currConstant = 0;
     currVal = 0;
   }
 
   return ltype;
 }
+// hw 6 bis hier neu
 
 ///////////////////////////////////////////////////////////////////////
 // Tabea hw4
