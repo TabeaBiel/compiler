@@ -125,6 +125,7 @@ void printOctal(int n, int a);
 void printBinary(int n, int a);
 
 int roundUp(int n, int m);
+int and(int a, int b);
 
 int* zalloc(int size);
 
@@ -559,6 +560,10 @@ void gr_cstar();
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
+// hw 6
+int currVal;
+int currConstant;
+
 int allocatedTemporaries = 0; // number of allocated temporaries
 
 int allocatedMemory = 0; // number of bytes for global variables and strings
@@ -852,8 +857,8 @@ int* touch(int* memory, int length);
 void selfie_load();
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
-
-int maxBinaryLength = 131072; // 128KB
+//hw 6
+int maxBinaryLength = 262144; // 256KB
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -2030,6 +2035,16 @@ int isHexadecimalDigit(){
   }
   return 0;
 }
+
+// hw 6
+int and(int a, int b) {
+  if (a) {
+    if(b) return 1;
+    else return 0;
+  }
+  else return 0;
+}
+
 ////////////////////////////////////////////////////////////////////
 
 int isCharacterLetterOrDigitOrUnderscore() {
@@ -2814,12 +2829,27 @@ void load_integer(int value) {
       emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), rightShift((value << 29), 29));
     }
   } else {
-    // load largest positive 16-bit number with a single bit set: 2^14
-    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), twoToThePowerOf(14));
-
-    // and then multiply 2^14 by 2^14*2^3 to get to 2^31 == INT_MIN
-    emitLeftShiftBy(14);
-    emitLeftShiftBy(3);
+    if(value != INT_MIN){
+      value = -value;
+      if (value < twoToThePowerOf(15))
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), value);
+      else if (value < twoToThePowerOf(28)) {
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), rightShift(value, 14));
+        emitLeftShiftBy(14);
+        emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), rightShift((value << 18), 18));
+      }else{
+        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), rightShift(value, 17));
+        emitLeftShiftBy(14);
+        emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), rightShift((value << 15), 18));
+        emitLeftShiftBy(3);
+        emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), rightShift((value << 29), 29));
+      }
+      emitRFormat(OP_SPECIAL,REG_ZR,currentTemporary(),currentTemporary(), 0, FCT_SUBU);
+    }else {
+      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), twoToThePowerOf(14));
+      emitLeftShiftBy(14);
+      emitLeftShiftBy(3);
+    }
   }
 }
 
@@ -3090,8 +3120,10 @@ int gr_factor() {
       type = load_variable(variableOrProcedureName);
 
   // integer?
-  } else if (symbol == SYM_INTEGER) {
-    load_integer(literal);
+  }else if (symbol == SYM_INTEGER) {
+    //Assignment6
+    currConstant = 1;
+    currVal = literal;
 
     getSymbol();
 
@@ -3140,10 +3172,23 @@ int gr_term() {
   int ltype;
   int operatorSymbol;
   int rtype;
+  // hw 6
+  int lVal;
+  int lConstant;
 
+  lVal = 0;
+  lConstant = 0;
   // assert: n = allocatedTemporaries
 
   ltype = gr_factor();
+
+  // hw 6
+  if(currConstant){
+    lVal = currVal;
+    lConstant = currConstant;
+  }
+  currConstant = 0;
+  currVal = 0;
 
   // assert: allocatedTemporaries == n + 1
 
@@ -3160,30 +3205,88 @@ int gr_term() {
     if (ltype != rtype)
       typeWarning(ltype, rtype);
 
-    if (operatorSymbol == SYM_ASTERISK) {
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, 0, FCT_MULTU);
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), 0, FCT_MFLO);
+    if(lConstant){
+      if(currConstant){ 
+        if(operatorSymbol == SYM_ASTERISK){ 
+          lVal = lVal * currVal;
+        }else if(operatorSymbol == SYM_DIV){ 
+          lVal = lVal / currVal;
+        }else if (operatorSymbol == SYM_MOD){ 
+          load_integer(lVal);
+          load_integer(currVal);
+          lVal = 0;
+          lConstant = 0;
+          currVal = 0;
+          currConstant = 0;
+        }
+    
+      }else { 
+        if (operatorSymbol == SYM_ASTERISK){ 
+          load_integer(lVal);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0,0, FCT_MULTU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), 0,FCT_MFLO);
 
-    } else if (operatorSymbol == SYM_DIV) {
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, 0, FCT_DIVU);
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), 0, FCT_MFLO);
+        }else if (operatorSymbol == SYM_DIV){ 
+          load_integer(lVal);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0,0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFLO);
+      
+        }else if (operatorSymbol == SYM_MOD){ 
+          load_integer(lVal);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0,0,FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), 0,FCT_MFHI);
+        }
+        tfree(1);
+        lConstant = 0;
+      }
+    }else { 
+      if(currConstant == 1) { 
+        if (operatorSymbol == SYM_ASTERISK){ 
+          load_integer(currVal);
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0,0, FCT_MULTU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFLO);
 
-    } else if (operatorSymbol == SYM_MOD) {
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, 0, FCT_DIVU);
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), 0, FCT_MFHI);
+        }else if(operatorSymbol == SYM_DIV){ 
+          load_integer(currVal);
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0,0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFLO);
+
+        }else if(operatorSymbol == SYM_MOD){ 
+          load_integer(currVal);
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, 0,FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFHI);
+        }
+        tfree(1);
+        lConstant = 0;
+    
+      }else { 
+        if(operatorSymbol == SYM_ASTERISK){ 
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0,0, FCT_MULTU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFLO);
+
+        }else if(operatorSymbol == SYM_DIV){ 
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0,0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFLO);
+
+        }else if(operatorSymbol == SYM_MOD){ 
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0,0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFHI);
+        }
+        tfree(1);
+        lConstant = 0;
+      }
     }
-
-    tfree(1);
+    currVal = 0;
+    currConstant = 0;
   }
 
-  // assert: allocatedTemporaries == n + 1
-
+  if(lConstant) { 
+    currConstant = 1;
+    currVal = lVal;
+  }else{ 
+    currVal = 0;
+    currConstant = 0;
+  }
   return ltype;
 }
 
@@ -3193,7 +3296,11 @@ int gr_simpleExpression() {
   int ltype;
   int operatorSymbol;
   int rtype;
-
+  // hw 6
+  int lVal;
+  int lConstant;
+  lVal = 0;
+  lConstant = 0;
   // assert: n = allocatedTemporaries
 
   // hw 5
@@ -3227,6 +3334,12 @@ int gr_simpleExpression() {
   }
   ltype = gr_term();
 
+  // hw 6
+  if (currConstant) { //int
+    lVal = currVal;
+    lConstant = currConstant;
+  }
+
   // assert: allocatedTemporaries == n + 1
 
   if (sign) {
@@ -3236,8 +3349,16 @@ int gr_simpleExpression() {
       ltype = INT_T;
     }
     // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-    emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), 0, FCT_SUBU);
+    // hw 6
+    if(lConstant){
+      lVal = 0 - lVal;
+    }else{
+      emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), 0, FCT_SUBU);
+    }
   }
+
+  currConstant = 0;
+  currVal = 0;
 
   // hw 5
   if (not){
@@ -3252,61 +3373,165 @@ int gr_simpleExpression() {
 
     rtype = gr_term();
 
-    // assert: allocatedTemporaries == n + 2
+    //Assignment6
+    if (lConstant) { //int
+      if(currConstant) { 
+          //const + const 
+          if (operatorSymbol == SYM_PLUS) { 
+            lVal = lVal + currVal;
+      //const - const 
+          } else if (operatorSymbol == SYM_MINUS) { 
+            lVal = lVal - currVal;
+          }
+      
+      } else { 
+      //const+var 
+        load_integer(lVal);
+      
+        if (operatorSymbol == SYM_PLUS) {
+          if (ltype == INTSTAR_T) {
+            if (rtype == INT_T)
+              // pointer arithmetic: factor of 2^2 of integer operand
+              emitLeftShiftBy(2);
+          } else if (rtype == INTSTAR_T)
+            typeWarning(ltype, rtype);
 
-    if (operatorSymbol == SYM_PLUS) {
-      if (ltype == INTSTAR_T) {
-        if (rtype == INT_T)
-          // pointer arithmetic: factor of 2^2 of integer operand
-          emitLeftShiftBy(2);
-      } else if (rtype == INTSTAR_T)
-        typeWarning(ltype, rtype);
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_ADDU);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(),0, FCT_ADDU);
+          
+        } else if (operatorSymbol == SYM_MINUS) { 
+          if (ltype != rtype)
+            typeWarning(ltype, rtype);
 
-    } else if (operatorSymbol == SYM_MINUS) {
-      if (ltype != rtype)
-        typeWarning(ltype, rtype);
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SUBU);
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(),0, FCT_SUBU);
+      
+        }
+        tfree(1);
+
+        lConstant = 0;
+      }
+    } else { //var
+      if(currConstant) {
+        load_integer(currVal);
+
+    // var + const 
+        if (operatorSymbol == SYM_PLUS) { 
+          if (ltype == INTSTAR_T) {
+            if (rtype == INT_T)
+              // pointer arithmetic: factor of 2^2 of integer operand
+              emitLeftShiftBy(2);
+          } else if (rtype == INTSTAR_T)
+            typeWarning(ltype, rtype);
+
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_ADDU);
+         
+        // var - const     
+        } else if (operatorSymbol == SYM_MINUS) { 
+          if (ltype != rtype)
+            typeWarning(ltype, rtype);
+
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_SUBU);
+          
+        }
+        tfree(1);
+
+        lConstant = 0;
+      } else { 
+      //var+var
+        if (operatorSymbol == SYM_PLUS) { 
+          if (ltype == INTSTAR_T) {
+            if (rtype == INT_T)
+              // pointer arithmetic: factor of 2^2 of integer operand
+              emitLeftShiftBy(2);
+          } else if (rtype == INTSTAR_T)
+            typeWarning(ltype, rtype);
+
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_ADDU);
+          
+    // var - var 
+        } else if (operatorSymbol == SYM_MINUS) { 
+          if (ltype != rtype)
+            typeWarning(ltype, rtype);
+
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_SUBU);
+          
+        }
+        tfree(1);
+
+        lConstant = 0;
+      }
     }
 
-    tfree(1);
+  currConstant = 0;
+  currVal = 0;
+
   }
 
   // assert: allocatedTemporaries == n + 1
 
+  if (lConstant) { //int
+    currConstant = 1;
+    currVal = lVal;
+  } else { //var
+    currConstant = 0;
+    currVal = 0;
+  }
+
   return ltype;
 }
+
 ///////////////////////////////////////////////////////////////////////
 // Tabea hw4
 int gr_shiftExpression(){ 
   int ltype;
   int operatorSymbol;
   int rtype;
+  // hw 6
+  int lVal;
+  int lConstant;
+  lConstant = 0;
+  lVal = 0;
 
   ltype = gr_simpleExpression();
 
+  // hw 6
+  if(currConstant){
+    lConstant = currConstant;
+    lVal = currVal;
+    load_integer(lVal);
+  }
+  currConstant = 0;
+  currVal = 0;
+
   // optional: <<, >>
-  if(isShiftSymbol()){
+  while(isShiftSymbol()){
     operatorSymbol = symbol;
 
     getSymbol();
 
     rtype = gr_simpleExpression();
 
-    if (operatorSymbol == SYM_LEFTSHIFT) {
+    // hw 6
+    lVal = 0;
+    lConstant = 0;
 
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLLV);
-
-    } else if (operatorSymbol == SYM_RIGHTSHIFT) {
-     
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SRLV);
-    }
-
-    tfree(1);
+    if(currConstant){
+    lVal = currVal;
+    lConstant = currConstant;
+    load_integer(lVal);
   }
+  currConstant = 0;
+  currVal = 0;
 
+    if (operatorSymbol == SYM_LEFTSHIFT) {
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLLV);
+    
+    } else if (operatorSymbol == SYM_RIGHTSHIFT) {
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SRLV);
+  
+  }
+  tfree(1);
+  }
+  // assert: allocatedTemporaries == n + 1
   return ltype;
 }
 ///////////////////////////////////////////////////////////////////////
