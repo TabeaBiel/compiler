@@ -125,7 +125,6 @@ void printOctal(int n, int a);
 void printBinary(int n, int a);
 
 int roundUp(int n, int m);
-int and(int a, int b);
 
 int* zalloc(int size);
 
@@ -154,15 +153,21 @@ int CHAR_EXCLAMATION  = '!';
 int CHAR_PERCENTAGE   = '%';
 int CHAR_SINGLEQUOTE  = 39; // ASCII code 39 = '
 int CHAR_DOUBLEQUOTE  = '"';
-// hw 5
-int CHAR_AND          = '&';
-int CHAR_OR           = '|';
-int CHAR_NOT          = '~';
+//hw5 start
+int CHAR_AND          = 38; // '&'
+int CHAR_OR           = 124; //'|'
+int CHAR_NOT          = 126; //'~'
+//hw5 end
+//hw7 start
+int CHAR_LSQRBRACKET  = '[';
+int CHAR_RSQRBRACKET  = ']';
+//hw7 end
 
 int SIZEOFINT     = 4; // must be the same as WORDSIZE
 int SIZEOFINTSTAR = 4; // must be the same as WORDSIZE
 
-int* power_of_two_table;
+//hw7
+int power_of_two_table[31];
 
 int INT_MAX; // maximum numerical value of a signed 32-bit integer
 int INT_MIN; // minimum numerical value of a signed 32-bit integer
@@ -214,23 +219,23 @@ void initLibrary() {
 
   // powers of two table with 31 entries for 2^0 to 2^30
   // avoiding overflow for 2^31 and larger numbers with 32-bit signed integers
-  power_of_two_table = malloc(31 * SIZEOFINT);
+  //hw7 power_of_two_table = malloc(31 * SIZEOFINT);
 
-  *power_of_two_table = 1; // 2^0 == 1
+  //hw7
+  power_of_two_table[0] = 1; // 2^0 == 1
 
   i = 1;
 
   while (i < 31) {
     // compute powers of two incrementally using this recurrence relation
-    *(power_of_two_table + i) = *(power_of_two_table + (i - 1)) * 2;
+    //hw7
+    power_of_two_table[i] = power_of_two_table[i-1] * 2;
 
     i = i + 1;
   }
 
   // compute INT_MAX and INT_MIN without integer overflows
   INT_MAX = (twoToThePowerOf(30) - 1) * 2 + 1;
-  //hw5
-  //INT_MIN = -INT_MAX - 1;
   INT_MIN = ~INT_MAX;
 
   INT16_MAX = twoToThePowerOf(15) - 1;
@@ -322,13 +327,19 @@ int SYM_NOTEQ        = 24; // !=
 int SYM_MOD          = 25; // %
 int SYM_CHARACTER    = 26; // character
 int SYM_STRING       = 27; // string
-// Tabea hw4
+//hw4 start
 int SYM_LEFTSHIFT    = 28; // <<
 int SYM_RIGHTSHIFT   = 29; // >>
-// hw 5
-int SYM_BITWISE_AND  = 30; // &
-int SYM_BITWISE_OR   = 31; // |
-int SYM_BITWISE_NOT  = 32; // ~
+//hw4 end
+//hw5 start
+int SYM_AND_BITW     = 30; //&
+int SYM_OR_BITW      = 31; //|
+int SYM_NOT_BITW     = 32; //~
+//hw5 end
+//hw7 start
+int SYM_LSQRBRACKET  = 33; //[
+int SYM_RSQRBRACKET  = 34; //]
+//hw7 end
 
 int* SYMBOLS; // strings representing symbols
 
@@ -365,8 +376,8 @@ int  sourceFD   = 0;        // file descriptor of open source file
 // ------------------------- INITIALIZATION ------------------------
 
 void initScanner () {
-  // Tabea hw4 & hw 5 malloc auf 30 & 33 statt 28 wegen >> und <<
-  SYMBOLS = malloc(33 * SIZEOFINTSTAR);
+  //hw4 hw5 hw7
+  SYMBOLS = malloc(35 * SIZEOFINTSTAR);
 
   *(SYMBOLS + SYM_IDENTIFIER)   = (int) "identifier";
   *(SYMBOLS + SYM_INTEGER)      = (int) "integer";
@@ -396,13 +407,19 @@ void initScanner () {
   *(SYMBOLS + SYM_MOD)          = (int) "%";
   *(SYMBOLS + SYM_CHARACTER)    = (int) "character";
   *(SYMBOLS + SYM_STRING)       = (int) "string";
-  // Tabea hw4
+  //hw4 start
   *(SYMBOLS + SYM_LEFTSHIFT)    = (int) "<<";
   *(SYMBOLS + SYM_RIGHTSHIFT)   = (int) ">>";
-  // hw 5
-  *(SYMBOLS + SYM_BITWISE_AND)  = (int) "&";
-  *(SYMBOLS + SYM_BITWISE_OR)   = (int) "|";
-  *(SYMBOLS + SYM_BITWISE_NOT)  = (int) "~";
+  //hw4 end
+  //hw5 start
+  *(SYMBOLS + SYM_AND_BITW)     = (int) "&";
+  *(SYMBOLS + SYM_OR_BITW)      = (int) "|";
+  *(SYMBOLS + SYM_NOT_BITW)     = (int) "~";
+  //hw5 end
+  //hw7 start
+  *(SYMBOLS + SYM_LSQRBRACKET)  = (int) "[";
+  *(SYMBOLS + SYM_RSQRBRACKET)  = (int) "]";
+  //hw7 end
 
   character = CHAR_EOF;
   symbol    = SYM_EOF;
@@ -428,7 +445,8 @@ void resetScanner() {
 
 void resetSymbolTables();
 
-void createSymbolTableEntry(int which, int* string, int line, int class, int type, int value, int address);
+//hw7 changed returntype from void tp int*
+int* createSymbolTableEntry(int which, int* string, int line, int class, int type, int value, int address);
 
 int* searchSymbolTable(int* entry, int* string, int class);
 int* getScopedSymbolTableEntry(int* string, int class);
@@ -437,16 +455,19 @@ int isUndefinedProcedure(int* entry);
 int reportUndefinedProcedures();
 
 // symbol table entry:
-// +----+---------+
-// |  0 | next    | pointer to next entry
-// |  1 | string  | identifier string, string literal
-// |  2 | line#   | source line number
-// |  3 | class   | VARIABLE, PROCEDURE, STRING
-// |  4 | type    | INT_T, INTSTAR_T, VOID_T
-// |  5 | value   | VARIABLE: initial value
-// |  6 | address | VARIABLE: offset, PROCEDURE: address, STRING: offset
-// |  7 | scope   | REG_GP, REG_FP
-// +----+---------+
+// +----+------------+
+// |  0 | next       | pointer to next entry
+// |  1 | string     | identifier string, string literal
+// |  2 | line#      | source line number
+// |  3 | class      | VARIABLE, PROCEDURE, STRING, ARRAY
+// |  4 | type       | INT_T, INTSTAR_T, VOID_T
+// |  5 | value      | VARIABLE: initial value
+// |  6 | address    | VARIABLE: offset, PROCEDURE: address, STRING: offset
+// |  7 | scope      | REG_GP, REG_FP
+// |  8 | dimension  | ARRAY: number of dimensions
+// |  9 | sizes      | ARRAY: list of dimension sizes
+// | 10 | totalsize  | ARRAY: total number of elements
+// +----+------------+
 
 int* getNextEntry(int* entry)  { return (int*) *entry; }
 int* getString(int* entry)     { return (int*) *(entry + 1); }
@@ -456,6 +477,45 @@ int  getType(int* entry)       { return        *(entry + 4); }
 int  getValue(int* entry)      { return        *(entry + 5); }
 int  getAddress(int* entry)    { return        *(entry + 6); }
 int  getScope(int* entry)      { return        *(entry + 7); }
+//hw7 start
+int  getDimensions(int* entry) { return        *(entry + 8); }
+int* getSizes(int* entry)      { return (int*) *(entry + 9); }
+int  getTotalSize(int* entry)  { return        *(entry + 10); }
+
+//gets the size for dimension dimNub....dimNumb starts with 1
+int  getDimSize(int* entry, int dimNumb){
+  int* ptr;
+  int i;
+
+  ptr = getSizes(entry);
+
+  i = 0;
+  while(i < (getDimensions(entry) - dimNumb +1)){
+    ptr = getNextEntry(ptr);
+    i = i + 1;
+  }
+  return *(ptr+1);
+}
+
+//get the multiplier for address calculation of dimension dimNumb....dimNumb starts with 1
+int getDimMultiplier(int* entry, int dimNumb){
+  int mult;
+  int i;
+  int* ptr;
+  mult = 1;
+  ptr = getSizes(entry);
+
+  i = 0;
+  while(i < (getDimensions(entry) - dimNumb)){ 
+    if((int) ptr == 0) return 0; //dimension doesn't exist
+    mult = mult * *(ptr + 1);
+    ptr = getNextEntry(ptr);
+    i = i + 1;
+  }
+
+  return mult;
+}
+//hw7 end
 
 void setNextEntry(int* entry, int* next)    { *entry       = (int) next; }
 void setString(int* entry, int* identifier) { *(entry + 1) = (int) identifier; }
@@ -465,6 +525,25 @@ void setType(int* entry, int type)          { *(entry + 4) = type; }
 void setValue(int* entry, int value)        { *(entry + 5) = value; }
 void setAddress(int* entry, int address)    { *(entry + 6) = address; }
 void setScope(int* entry, int scope)        { *(entry + 7) = scope; }
+//hw7 start
+void setSizes(int* entry, int* sizes)       { *(entry + 9)  = (int) sizes;}
+void setDimensions(int* entry, int dim)     { *(entry + 8)  = dim; }
+void setTotalSize(int* entry, int size)     { *(entry + 10) = size; }
+
+//adds a new array dimension to a symbol table entry
+void addDimension(int* entry, int size){
+  int* new;
+
+  setDimensions(entry, getDimensions(entry) + 1);
+  setTotalSize(entry, getTotalSize(entry) * size);
+  
+  new = malloc(SIZEOFINT + SIZEOFINTSTAR);
+  *new = (int) getSizes(entry);
+  *(new + 1) = size;
+
+  setSizes(entry, new);
+}
+//hw7 end
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
@@ -472,6 +551,8 @@ void setScope(int* entry, int scope)        { *(entry + 7) = scope; }
 int VARIABLE  = 1;
 int PROCEDURE = 2;
 int STRING    = 3;
+//hw7
+int ARRAY     = 4;
 
 // types
 int INT_T     = 1;
@@ -493,6 +574,8 @@ int* library_symbol_table = (int*) 0;
 int numberOfGlobalVariables = 0;
 int numberOfProcedures      = 0;
 int numberOfStrings         = 0;
+//hw7
+int numberOfArrays          = 0;
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -504,6 +587,8 @@ void resetSymbolTables() {
   numberOfGlobalVariables = 0;
   numberOfProcedures      = 0;
   numberOfStrings         = 0;
+  //hw7
+  numberOfArrays          = 0;
 }
 
 // -----------------------------------------------------------------
@@ -517,8 +602,11 @@ int isExpression();
 int isLiteral();
 int isStarOrDivOrModulo();
 int isPlusOrMinus();
-int isShiftSymbol();
 int isComparison();
+//hw4
+int isShift();
+//hw5 
+int isAndOrOr();
 
 int lookForFactor();
 int lookForStatement();
@@ -545,9 +633,9 @@ int  gr_call(int* procedure);
 int  gr_factor();
 int  gr_term();
 int  gr_simpleExpression();
-int  gr_shiftExpression();
-int  gr_comparisonExpression();
 int  gr_expression();
+//hw5
+int  gr_compExpression();
 void gr_while();
 void gr_if();
 void gr_return();
@@ -557,12 +645,12 @@ void gr_variable(int offset);
 int  gr_initialization(int type);
 void gr_procedure(int* procedure, int type);
 void gr_cstar();
+//hw4
+int gr_shiftExpression();
+//hw7
+int gr_selector(int selectorNum, int* entry);
 
 // ------------------------ GLOBAL VARIABLES -----------------------
-
-// hw 6
-int currVal;
-int currConstant;
 
 int allocatedTemporaries = 0; // number of allocated temporaries
 
@@ -579,6 +667,11 @@ int numberOfAssignments = 0;
 int numberOfWhile       = 0;
 int numberOfIf          = 0;
 int numberOfReturn      = 0;
+//hw6
+int value               = 0;
+int valueAvailable      = 0;
+//hw7
+int arrayDeklaration    = 0;
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -588,6 +681,9 @@ void resetParser() {
   numberOfWhile       = 0;
   numberOfIf          = 0;
   numberOfReturn      = 0;
+  //hw6
+  value               = 0;
+  valueAvailable      = 0;
 }
 
 // -----------------------------------------------------------------
@@ -654,53 +750,90 @@ int REG_GP = 28;
 int REG_SP = 29;
 int REG_FP = 30;
 int REG_RA = 31;
+//hw7 start
+int ABBR   = 0;
+int NAME   = 1;
 
-int* REGISTERS; // strings representing registers
+//hw7
+int REGISTERS[2][32]; // strings representing registers
 
 // ------------------------- INITIALIZATION ------------------------
 
 void initRegister() {
-  REGISTERS = malloc(NUMBEROFREGISTERS * SIZEOFINTSTAR);
+  //hw7 start
+  REGISTERS[ABBR][REG_ZR] = (int)"$zero";
+  REGISTERS[ABBR][REG_AT] = (int)"$at";
+  REGISTERS[ABBR][REG_V0] = (int)"$v0";
+  REGISTERS[ABBR][REG_V1] = (int)"$v1";
+  REGISTERS[ABBR][REG_A0] = (int)"$a0";
+  REGISTERS[ABBR][REG_A1] = (int)"$a1";
+  REGISTERS[ABBR][REG_A2] = (int)"$a2";
+  REGISTERS[ABBR][REG_A3] = (int)"$a3";
+  REGISTERS[ABBR][REG_T0] = (int)"$t0";
+  REGISTERS[ABBR][REG_T1] = (int)"$t1";
+  REGISTERS[ABBR][REG_T2] = (int)"$t2";
+  REGISTERS[ABBR][REG_T3] = (int)"$t3";
+  REGISTERS[ABBR][REG_T4] = (int)"$t4";
+  REGISTERS[ABBR][REG_T5] = (int)"$t5";
+  REGISTERS[ABBR][REG_T6] = (int)"$t6";
+  REGISTERS[ABBR][REG_T7] = (int)"$t7";
+  REGISTERS[ABBR][REG_S0] = (int)"$s0";
+  REGISTERS[ABBR][REG_S1] = (int)"$s1";
+  REGISTERS[ABBR][REG_S2] = (int)"$s2";
+  REGISTERS[ABBR][REG_S3] = (int)"$s3";
+  REGISTERS[ABBR][REG_S4] = (int)"$s4";
+  REGISTERS[ABBR][REG_S5] = (int)"$s5";
+  REGISTERS[ABBR][REG_S6] = (int)"$s6";
+  REGISTERS[ABBR][REG_S7] = (int)"$s7";
+  REGISTERS[ABBR][REG_T8] = (int)"$t8";
+  REGISTERS[ABBR][REG_T9] = (int)"$t9";
+  REGISTERS[ABBR][REG_K0] = (int)"$k0";
+  REGISTERS[ABBR][REG_K1] = (int)"$k1";
+  REGISTERS[ABBR][REG_GP] = (int)"$gp";
+  REGISTERS[ABBR][REG_SP] = (int)"$sp";
+  REGISTERS[ABBR][REG_FP] = (int)"$fp";
+  REGISTERS[ABBR][REG_RA] = (int)"$ra";
 
-  *(REGISTERS + REG_ZR) = (int) "$zero";
-  *(REGISTERS + REG_AT) = (int) "$at";
-  *(REGISTERS + REG_V0) = (int) "$v0";
-  *(REGISTERS + REG_V1) = (int) "$v1";
-  *(REGISTERS + REG_A0) = (int) "$a0";
-  *(REGISTERS + REG_A1) = (int) "$a1";
-  *(REGISTERS + REG_A2) = (int) "$a2";
-  *(REGISTERS + REG_A3) = (int) "$a3";
-  *(REGISTERS + REG_T0) = (int) "$t0";
-  *(REGISTERS + REG_T1) = (int) "$t1";
-  *(REGISTERS + REG_T2) = (int) "$t2";
-  *(REGISTERS + REG_T3) = (int) "$t3";
-  *(REGISTERS + REG_T4) = (int) "$t4";
-  *(REGISTERS + REG_T5) = (int) "$t5";
-  *(REGISTERS + REG_T6) = (int) "$t6";
-  *(REGISTERS + REG_T7) = (int) "$t7";
-  *(REGISTERS + REG_S0) = (int) "$s0";
-  *(REGISTERS + REG_S1) = (int) "$s1";
-  *(REGISTERS + REG_S2) = (int) "$s2";
-  *(REGISTERS + REG_S3) = (int) "$s3";
-  *(REGISTERS + REG_S4) = (int) "$s4";
-  *(REGISTERS + REG_S5) = (int) "$s5";
-  *(REGISTERS + REG_S6) = (int) "$s6";
-  *(REGISTERS + REG_S7) = (int) "$s7";
-  *(REGISTERS + REG_T8) = (int) "$t8";
-  *(REGISTERS + REG_T9) = (int) "$t9";
-  *(REGISTERS + REG_K0) = (int) "$k0";
-  *(REGISTERS + REG_K1) = (int) "$k1";
-  *(REGISTERS + REG_GP) = (int) "$gp";
-  *(REGISTERS + REG_SP) = (int) "$sp";
-  *(REGISTERS + REG_FP) = (int) "$fp";
-  *(REGISTERS + REG_RA) = (int) "$ra";
+  REGISTERS[NAME][REG_ZR] = (int) "hardwired zero";
+  REGISTERS[NAME][REG_AT] = (int) "assembler temporary";
+  REGISTERS[NAME][REG_V0] = (int) "value 0";
+  REGISTERS[NAME][REG_V1] = (int) "value 1";
+  REGISTERS[NAME][REG_A0] = (int) "argument 0";
+  REGISTERS[NAME][REG_A1] = (int) "argument 1";
+  REGISTERS[NAME][REG_A2] = (int) "argument 2";
+  REGISTERS[NAME][REG_A3] = (int) "argument 3";
+  REGISTERS[NAME][REG_T0] = (int) "temporary 0";
+  REGISTERS[NAME][REG_T1] = (int) "temporary 1";
+  REGISTERS[NAME][REG_T2] = (int) "temporary 2";
+  REGISTERS[NAME][REG_T3] = (int) "temporary 3";
+  REGISTERS[NAME][REG_T4] = (int) "temporary 4";
+  REGISTERS[NAME][REG_T5] = (int) "temporary 5";
+  REGISTERS[NAME][REG_T6] = (int) "temporary 6";
+  REGISTERS[NAME][REG_T7] = (int) "temporary 7";
+  REGISTERS[NAME][REG_S0] = (int) "saved value 0";
+  REGISTERS[NAME][REG_S1] = (int) "saved value 1";
+  REGISTERS[NAME][REG_S2] = (int) "saved value 2";
+  REGISTERS[NAME][REG_S3] = (int) "saved value 3";
+  REGISTERS[NAME][REG_S4] = (int) "saved value 4";
+  REGISTERS[NAME][REG_S5] = (int) "saved value 5";
+  REGISTERS[NAME][REG_S6] = (int) "saved value 6";
+  REGISTERS[NAME][REG_S7] = (int) "saved value 7";
+  REGISTERS[NAME][REG_T8] = (int) "temporary 8";
+  REGISTERS[NAME][REG_T9] = (int) "temporary 9";
+  REGISTERS[NAME][REG_K0] = (int) "trap 0";
+  REGISTERS[NAME][REG_K1] = (int) "trap 1";
+  REGISTERS[NAME][REG_GP] = (int) "global pointer";
+  REGISTERS[NAME][REG_SP] = (int) "stack pointer";
+  REGISTERS[NAME][REG_FP] = (int) "frame pointer";
+  REGISTERS[NAME][REG_RA] = (int) "return address";
+  //hw7 end
 }
 
 // -----------------------------------------------------------------
 // ---------------------------- ENCODER ----------------------------
 // -----------------------------------------------------------------
-// Tabea hw3 int shiftAmount hinzugefügt
-int encodeRFormat(int opcode, int rs, int rt, int rd, int shiftAmount, int function);
+
+int encodeRFormat(int opcode, int rs, int rt, int rd, int shamt, int function);
 int encodeIFormat(int opcode, int rs, int rt, int immediate);
 int encodeJFormat(int opcode, int instr_index);
 
@@ -714,13 +847,12 @@ int getOpcode(int instruction);
 int getRS(int instruction);
 int getRT(int instruction);
 int getRD(int instruction);
+// hw3
+int getShamt(int instruction);
 int getFunction(int instruction);
 int getImmediate(int instruction);
 int getInstrIndex(int instruction);
 int signExtend(int immediate);
-
-// Tabea hw3
-int getShamt(int instruction);
 
 void decodeRFormat();
 void decodeIFormat();
@@ -733,24 +865,28 @@ void printFunction(int function);
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
 
-int OP_SPECIAL = 0x0; // hex 0
-int OP_J       = 0x2; // hex 2
-int OP_JAL     = 0x3; // hex 3
-int OP_BEQ     = 0x4; // hex 4
-int OP_BNE     = 0x5; // hex 5
-int OP_ADDIU   = 0x9; // hex 9
-int OP_LW      = 0x23; // hex 35
-int OP_SW      = 0x2b; // hex 43
-
-// hw 5
-int OP_ANDI    = 0b001100; // 12
-int OP_ORI     = 0b001101; // 13
-
+int OP_SPECIAL = 0x0;
+int OP_J       = 0x2;
+int OP_JAL     = 0x3;
+int OP_BEQ     = 0x4;
+int OP_BNE     = 0x5;
+int OP_ADDIU   = 0x9;
+//hw5 start
+int OP_ANDI    = 0xC;
+int OP_ORI     = 0xD;
+//hw5 end
+int OP_LW      = 0x23;
+int OP_SW      = 0x2b;
 
 int* OPCODES; // strings representing MIPS opcodes
 
-// Tabea hw3
 int FCT_NOP     = 0x0;
+// hw3 start
+int FCT_SLL   = 0x0;
+int FCT_SRL   = 0x2;
+int FCT_SLLV  = 0x4;
+int FCT_SRLV  = 0x6;
+// hw3 end
 int FCT_JR      = 0x8;
 int FCT_SYSCALL = 0xc;
 int FCT_MFHI    = 0x10;
@@ -759,17 +895,12 @@ int FCT_MULTU   = 0x19;
 int FCT_DIVU    = 0x1b;
 int FCT_ADDU    = 0x21;
 int FCT_SUBU    = 0x23;
+//hw5 start
+int FCT_AND     = 0x24;
+int FCT_OR      = 0x25;
+int FCT_NOR     = 0x27;
+//hw5 end
 int FCT_SLT     = 0x2a;
-
-// Tabea hw3
-int FCT_SLL = 0x0;
-int FCT_SRL = 0x2;
-int FCT_SLLV = 0x4;
-int FCT_SRLV = 0x6;
-// hw 5
-int FCT_AND     = 0b100100; // 36
-int FCT_OR      = 0b100101; // 37
-int FCT_NOR     = 0b100111; // 39
 
 int* FUNCTIONS; // strings representing MIPS functions
 
@@ -779,11 +910,11 @@ int opcode      = 0;
 int rs          = 0;
 int rt          = 0;
 int rd          = 0;
+// hw3
+int shamt   = 0;
 int immediate   = 0;
 int function    = 0;
 int instr_index = 0;
-// Tabea hw3
-int shamt       = 0;
 
 // ------------------------- INITIALIZATION ------------------------
 
@@ -796,16 +927,21 @@ void initDecoder() {
   *(OPCODES + OP_BEQ)     = (int) "beq";
   *(OPCODES + OP_BNE)     = (int) "bne";
   *(OPCODES + OP_ADDIU)   = (int) "addiu";
-  *(OPCODES + OP_LW)      = (int) "lw";
-  *(OPCODES + OP_SW)      = (int) "sw";
-  // hw 5
+  //hw5 start
   *(OPCODES + OP_ANDI)    = (int) "andi";
   *(OPCODES + OP_ORI)     = (int) "ori";
+  //hw5 end
+  *(OPCODES + OP_LW)      = (int) "lw";
+  *(OPCODES + OP_SW)      = (int) "sw";
 
   FUNCTIONS = malloc(43 * SIZEOFINTSTAR);
 
-  // Tabea hw3
-  //*(FUNCTIONS + FCT_NOP)     = (int) "nop";
+  // hw3 start
+  *(FUNCTIONS + FCT_SLL)     = (int) "sll";
+  *(FUNCTIONS + FCT_SRL)     = (int) "srl";
+  *(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
+  *(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
+  // hw3 end
   *(FUNCTIONS + FCT_JR)      = (int) "jr";
   *(FUNCTIONS + FCT_SYSCALL) = (int) "syscall";
   *(FUNCTIONS + FCT_MFHI)    = (int) "mfhi";
@@ -814,17 +950,12 @@ void initDecoder() {
   *(FUNCTIONS + FCT_DIVU)    = (int) "divu";
   *(FUNCTIONS + FCT_ADDU)    = (int) "addu";
   *(FUNCTIONS + FCT_SUBU)    = (int) "subu";
+  //hw5 start
+  *(FUNCTIONS + FCT_AND)     = (int) "and";
+  *(FUNCTIONS + FCT_OR)      = (int) "or";
+  *(FUNCTIONS + FCT_NOR)     = (int) "nor";
+  //hw5 end
   *(FUNCTIONS + FCT_SLT)     = (int) "slt";
-
-  // Tabea hw3
-   *(FUNCTIONS + FCT_SLL)     = (int) "sll";
-   *(FUNCTIONS + FCT_SRL)     = (int) "srl";
-   *(FUNCTIONS + FCT_SLLV)    = (int) "sllv";
-   *(FUNCTIONS + FCT_SRLV)    = (int) "srlv";
-   // hw 5
-   *(FUNCTIONS + FCT_AND)     = (int) "and";
-   *(FUNCTIONS + FCT_OR)      = (int) "or";
-   *(FUNCTIONS + FCT_NOR)     = (int) "nor";
 }
 
 // -----------------------------------------------------------------
@@ -835,8 +966,9 @@ int  loadBinary(int baddr);
 void storeBinary(int baddr, int instruction);
 
 void emitInstruction(int instruction);
-// Tabea hw3 int shmat hinzugefügt
-void emitRFormat(int opcode, int rs, int rt, int rd, int shamt, int function);
+// hw3
+void emitRFormatExtended(int opcode, int rs, int rt, int rd, int shamt, int function);
+void emitRFormat(int opcode, int rs, int rt, int rd, int function);
 void emitIFormat(int opcode, int rs, int rt, int immediate);
 void emitJFormat(int opcode, int instr_index);
 
@@ -857,8 +989,8 @@ int* touch(int* memory, int length);
 void selfie_load();
 
 // ------------------------ GLOBAL CONSTANTS -----------------------
-//hw 6
-int maxBinaryLength = 262144; // 256KB
+//hw6
+int maxBinaryLength = 262144; // 128KB
 
 // ------------------------ GLOBAL VARIABLES -----------------------
 
@@ -1026,8 +1158,12 @@ void initMemory(int megabytes) {
 // -----------------------------------------------------------------
 
 void fct_syscall();
-// Tabea hw3
-void fct_nop();
+// hw3 start
+void fct_sll();
+void fct_srl();
+void fct_sllv();
+void fct_srlv();
+// hw3 end
 void op_jal();
 void op_j();
 void op_beq();
@@ -1043,18 +1179,13 @@ void fct_subu();
 void op_lw();
 void fct_slt();
 void op_sw();
-
-// Tabea hw3
-void fct_sll();
-void fct_srl();
-void fct_sllv();
-void fct_srlv();
-//hw 5
+//hw5 start
 void fct_and();
-void op_andi();
 void fct_or();
-void op_ori();
 void fct_nor();
+void op_andi();
+void op_ori();
+//hw5 end
 
 // -----------------------------------------------------------------
 // -------------------------- INTERPRETER --------------------------
@@ -1366,9 +1497,9 @@ void initSelfie(int argc, int* argv) {
 
 int twoToThePowerOf(int p) {
   // assert: 0 <= p < 31
-  return *(power_of_two_table + p);
+  // hw7 return *(power_of_two_table + p);
+  return power_of_two_table[p];
 }
-
 
 int rightShift(int n, int b) {
   // assert: b >= 0
@@ -1376,6 +1507,7 @@ int rightShift(int n, int b) {
   if (n >= 0) {
     if (b < 31)
       // right shift of positive integers works by division with powers of two
+      //hw4
       return n >> b;
     else
       // right shift of a 32-bit integer by more than 31 bits is always 0
@@ -1384,7 +1516,8 @@ int rightShift(int n, int b) {
     // right shift of negative integers requires resetting the sign bit first,
     // then dividing with powers of two, and finally restoring the sign bit
     // but b bits to the right; this works even if n == INT_MIN
-    return (((n + 1) + INT_MAX) >> b) +
+    //hw4
+    return ((n + 1) + INT_MAX >> b) +
       ((INT_MAX >> b) + 1);
   else if (b == 31)
     // right shift of a negative 32-bit integer by 31 bits is 1 (the sign bit)
@@ -1397,29 +1530,65 @@ int rightShift(int n, int b) {
 int loadCharacter(int* s, int i) {
   // assert: i >= 0
   int a;
+  //hw5 start
+  int byteIndex;
+  int mask;
+  int b;
+  //hw5 end
 
   // a is the index of the word where the to-be-loaded i-th character in s is
   a = i / SIZEOFINT;
+  //hw5 start
+  //byteIndex is the index of the byte inside the word
+  byteIndex = i % SIZEOFINT;
 
-  // shift to-be-loaded character to the left resetting all bits to the left
-  // then shift to-be-loaded character all the way to the right and return
-  //return rightShift((*(s + a) << ((SIZEOFINT - 1) - (i % SIZEOFINT)) * 8), (SIZEOFINT - 1) * 8);
-  return rightShift((*(s + a) & (0xFF << ((i % SIZEOFINT) * 8))), ((i % SIZEOFINT) * 8));
+  //create mask
+  mask = 0xFF;
+  mask = mask << (byteIndex * 8);
 
+  //get char by using mask
+  b = *(s + a);
+  b = b & mask;
+  b = b >> (byteIndex * 8);
+
+  //hw4
+  //hw5 return rightShift(*(s + a) << ((SIZEOFINT - 1) - (i % SIZEOFINT)) * 8, (SIZEOFINT - 1) * 8);
+  return b;
+  //hw5 end
 }
 
 int* storeCharacter(int* s, int i, int c) {
   // assert: i >= 0, all characters are 7-bit
   int a;
+  //hw5 start
+  int byteIndex;
+  int mask; 
+  int b;
+  //hw5 end
 
   // a is the index of the word where the with c
   // to-be-overwritten i-th character in s is
   a = i / SIZEOFINT;
 
-  // subtract the to-be-overwritten character resetting its bits in s
-  // then add c setting its bits at the i-th position in s
-  //*(s + a) = (*(s + a) - (loadCharacter(s, i) << (i % SIZEOFINT) * 8)) + (c << (i % SIZEOFINT) * 8);
-  *(s + a) = *(s + a) & ~(0xFF << ((i % SIZEOFINT) * 8)) | (c << (i % SIZEOFINT) * 8);
+  //hw5 start
+  //get byteIndex inside of word
+  byteIndex = i % SIZEOFINT;
+
+  //create mask to clear byte
+  mask = 0xFF;
+  mask = mask << (byteIndex * 8);
+  mask = ~ mask;
+
+  //delete former char at byteIndex
+  *(s + a) = *(s + a) & mask;
+
+  //set new char at byteIndex
+  c = c << (byteIndex * 8);
+  *(s + a) = *(s + a) | c;
+  //hw5 end
+
+  //hw4
+  //hw5 *(s + a) = (*(s + a) - (loadCharacter(s, i) << (i % SIZEOFINT) * 8)) + (c << (i % SIZEOFINT) * 8);
 
   return s;
 }
@@ -1470,7 +1639,7 @@ int stringCompare(int* s, int* t) {
     else
       return 0;
 }
-// Tabea hw2
+
 int atoi(int* s, int b) {
   int i;
   int n;
@@ -1495,21 +1664,20 @@ int atoi(int* s, int b) {
       // c was not a digit
       return -1;
   
-    if (c > 9){
-      if(c >= 'a'-'0'){
-        if(c <= 'f'-'0'){
-          c = c-39;
-        }
+  if(c>9){
+    //letters 'A' till 'F'
+    if(c>=49){
+      if(c<=54) c=c-39;
+    }else{
+      //letters 'a' till 'f'
+      if (c>=17){
+        if(c<=22) c=c-7;
       }else{
-        if(c >= 'A'-'0'){
-          if(c <= 'F'-'0'){
-            c = c-7;
-          }  
-        }else{
-          c = 16;
-        }
+        //other chars
+        c=16;
       }
     }
+  } 
   
     if (c >= b)
       // c was not a digit of the used base
@@ -1518,7 +1686,7 @@ int atoi(int* s, int b) {
     // assert: s contains a decimal number, that is, with base b
     n = n * b + c;
 
-    // go to the next digit
+    // go to next digit
     i = i + 1;
 
     c = loadCharacter(s, i);
@@ -1584,7 +1752,8 @@ int* itoa(int n, int* s, int b, int a, int p) {
         i = 1;
       } else {
         // reset msb, restore below
-        n   = rightShift((n << 1), 1);
+        //hw4
+        n   = rightShift(n << 1, 1);
         msb = 1;
       }
     }
@@ -1802,6 +1971,8 @@ void printOctal(int n, int a) {
 }
 
 void printBinary(int n, int a) {
+  //hw3
+  print((int*) "0b");
   print(itoa(n, integer_buffer, 2, a, 0));
 }
 
@@ -2021,8 +2192,6 @@ int isCharacterDigit() {
     return 0;
 }
 
-////////////////////////////////////////////////////////////////////
-// Tabea hw2
 int isHexadecimalDigit(){
   int is;
   is=isCharacterDigit();
@@ -2035,17 +2204,6 @@ int isHexadecimalDigit(){
   }
   return 0;
 }
-
-// hw 6
-int and(int a, int b) {
-  if (a) {
-    if(b) return 1;
-    else return 0;
-  }
-  else return 0;
-}
-
-////////////////////////////////////////////////////////////////////
 
 int isCharacterLetterOrDigitOrUnderscore() {
   if (isCharacterLetter())
@@ -2089,7 +2247,7 @@ int identifierOrKeyword() {
   else
     return SYM_IDENTIFIER;
 }
-// Tabea hw2
+
 void getSymbol() {
   int i;
   int base;
@@ -2130,39 +2288,30 @@ void getSymbol() {
         // accommodate integer and null for termination
         integer = malloc(maxIntegerLength + 1);
 
-/////////////////////////////////////////////////////////////////////
-// Tabea hw2
-        if(character!='0'){
-          base=10;
-        }else{
+        if(character!='0') base=10;
+        else{
           getCharacter();
           if(isCharacterDigit()){
-            if(character<'9'){ 
-              base=8;
-            }
-          }else if(character=='b'){
-            base=2;
-          }else if(character=='B'){ 
-            base=2;
-          }else if(character=='x'){
-            base=16;
-          }else if(character=='X'){
-            base=16;
-          }else{
-            base=10;
-          }
+            if(character<'9') base=8;
+          }else if(character=='x') base=16;
+          else if(character=='X') base=16;
+          else if(character=='b') base=2;
+          else if(character=='B') base=2;
+          else base=10;
+          //if the literal contains only one 0 and know other symbol, nothing else is written into integer, but termination
+          //char....this leads atoi to return the initial value of n, which is 0 
         }
 
+        //in case of base 2 or 16 the literal starts at the next char
       if(base!=10){
         if(base!=8) getCharacter();
       }
-/////////////////////////////////////////////////////////////////////
-// Tabea hw2
+
       i = 0;
       while (isHexadecimalDigit()) {
           if (i >= maxIntegerLength) {
               syntaxErrorMessage((int*) "integer out of bound");
-
+              
               exit(-1);
           }
 
@@ -2173,9 +2322,8 @@ void getSymbol() {
 
           getCharacter();
       }
-
-/////////////////////////////////////////////////////////////////////
-// Tabea hw2
+      
+      //if no integerliteral char is found after the prefix, a syntax error occurs
       if(i==0){
         if(base!=10){
           syntaxErrorMessage((int*) "literal contains only prefix");
@@ -2183,7 +2331,6 @@ void getSymbol() {
               exit(-1);
         }
       }
-/////////////////////////////////////////////////////////////////////
 
       storeCharacter(integer, i, 0); // null-terminated string
 
@@ -2195,7 +2342,7 @@ void getSymbol() {
               isINTMIN = 1;
             else {
               syntaxErrorMessage((int*) "integer out of bound");
-
+              
               exit(-1);
             }
           } else {
@@ -2318,6 +2465,18 @@ void getSymbol() {
 
         symbol = SYM_RBRACE;
 
+      //hw7 start
+      } else if (character == CHAR_LSQRBRACKET){
+        getCharacter();
+
+        symbol = SYM_LSQRBRACKET;
+
+      }else if (character == CHAR_RSQRBRACKET){
+        getCharacter();
+
+        symbol = SYM_RSQRBRACKET;
+        
+        //hw7 end
       } else if (character == CHAR_COMMA) {
         getCharacter();
 
@@ -2327,15 +2486,17 @@ void getSymbol() {
         getCharacter();
 
         if (character == CHAR_EQUAL) {
-          getCharacter();
-
-          symbol = SYM_LEQ;
-        } else if(character == CHAR_LT){
             getCharacter();
 
-            symbol = SYM_LEFTSHIFT;
-        } else
-          symbol = SYM_LT;
+            symbol = SYM_LEQ;
+        //hw4
+        } else if(character == CHAR_LT){
+          getCharacter();
+
+          symbol=SYM_LEFTSHIFT;
+        }else{
+            symbol = SYM_LT;
+        }
 
       } else if (character == CHAR_GT) {
         getCharacter();
@@ -2344,12 +2505,14 @@ void getSymbol() {
           getCharacter();
 
           symbol = SYM_GEQ;
+        //hw4
         } else if(character == CHAR_GT){
-            getCharacter();
+          getCharacter();
 
-            symbol = SYM_RIGHTSHIFT;
-        } else
+          symbol=SYM_RIGHTSHIFT;
+        }else{
           symbol = SYM_GT;
+        }
 
       } else if (character == CHAR_EXCLAMATION) {
         getCharacter();
@@ -2365,21 +2528,20 @@ void getSymbol() {
         getCharacter();
 
         symbol = SYM_MOD;
-      // hw 5
+      //hw5 start
       } else if (character == CHAR_AND){
         getCharacter();
-        
-        symbol = SYM_BITWISE_AND;
 
-      } else if (character == CHAR_NOT){
-          getCharacter();
-
-          symbol = SYM_BITWISE_NOT;
+        symbol = SYM_AND_BITW;
       } else if (character == CHAR_OR){
-          getCharacter();
+        getCharacter();
 
-          symbol = SYM_BITWISE_OR;
+        symbol = SYM_OR_BITW;
+      } else if(character == CHAR_NOT){
+        getCharacter();
 
+        symbol = SYM_NOT_BITW;
+      //hw5 end
       } else {
         printLineNumber((int*) "error", lineNumber);
         print((int*) "found unknown character ");
@@ -2398,11 +2560,11 @@ void getSymbol() {
 // -----------------------------------------------------------------
 // ------------------------- SYMBOL TABLE --------------------------
 // -----------------------------------------------------------------
-
-void createSymbolTableEntry(int whichTable, int* string, int line, int class, int type, int value, int address) {
+//hw7 changed returntype
+int* createSymbolTableEntry(int whichTable, int* string, int line, int class, int type, int value, int address) {
   int* newEntry;
-
-  newEntry = malloc(2 * SIZEOFINTSTAR + 6 * SIZEOFINT);
+  //hw7
+  newEntry = malloc(3 * SIZEOFINTSTAR + 8 * SIZEOFINT);
 
   setString(newEntry, string);
   setLineNumber(newEntry, line);
@@ -2410,6 +2572,9 @@ void createSymbolTableEntry(int whichTable, int* string, int line, int class, in
   setType(newEntry, type);
   setValue(newEntry, value);
   setAddress(newEntry, address);
+  setTotalSize(newEntry, 1);
+  setDimensions(newEntry, 0);
+  setSizes(newEntry, (int*) 0);
 
   // create entry at head of symbol table
   if (whichTable == GLOBAL_TABLE) {
@@ -2423,6 +2588,10 @@ void createSymbolTableEntry(int whichTable, int* string, int line, int class, in
       numberOfProcedures = numberOfProcedures + 1;
     else if (class == STRING)
       numberOfStrings = numberOfStrings + 1;
+    //hw7 start
+    else if(class == ARRAY)
+      numberOfArrays = numberOfArrays +1;
+    //hw7 end
   } else if (whichTable == LOCAL_TABLE) {
     setScope(newEntry, REG_FP);
     setNextEntry(newEntry, local_symbol_table);
@@ -2433,6 +2602,9 @@ void createSymbolTableEntry(int whichTable, int* string, int line, int class, in
     setNextEntry(newEntry, library_symbol_table);
     library_symbol_table = newEntry;
   }
+
+  //hw7
+  return newEntry;
 }
 
 int* searchSymbolTable(int* entry, int* string, int class) {
@@ -2574,6 +2746,17 @@ int isPlusOrMinus() {
     return 0;
 }
 
+//hw5 start
+int isAndOrOr(){
+  if (symbol == SYM_AND_BITW)
+    return 1;
+  else if (symbol == SYM_OR_BITW)
+    return 1;
+  else
+    return 0;
+}
+//hw5 end
+
 int isComparison() {
   if (symbol == SYM_EQUALITY)
     return 1;
@@ -2590,14 +2773,12 @@ int isComparison() {
   else
     return 0;
 }
-// Tabea hw4
-int isShiftSymbol(){
-  if(symbol == SYM_LEFTSHIFT)
-    return 1;
-  else if(symbol == SYM_RIGHTSHIFT)
-    return 1;
-  else
-    return 0;
+
+//hw4
+int isShift(){
+  if(symbol == SYM_LEFTSHIFT) return 1;
+  else if(symbol == SYM_RIGHTSHIFT) return 1;
+  else return 0;
 }
 
 int lookForFactor() {
@@ -2615,6 +2796,10 @@ int lookForFactor() {
     return 0;
   else if (symbol == SYM_EOF)
     return 0;
+  //hw5 start
+  else if (symbol == SYM_NOT_BITW)
+    return 0;
+  //hw5 end
   else
     return 1;
 }
@@ -2663,7 +2848,7 @@ int currentTemporary() {
     return allocatedTemporaries + REG_A3;
   else {
     syntaxErrorMessage((int*) "illegal register access");
-
+    
     exit(-1);
   }
 }
@@ -2673,10 +2858,22 @@ int previousTemporary() {
     return currentTemporary() - 1;
   else {
     syntaxErrorMessage((int*) "illegal register access");
-
+  
     exit(-1);
   }
 }
+
+//hw6 start
+int previousPreviousTemporary() {
+  if (allocatedTemporaries > 2)
+    return currentTemporary() - 2;
+  else {
+    syntaxErrorMessage((int*) "illegal register access");
+  
+    exit(-1);
+  }
+}
+//hw6 end
 
 int nextTemporary() {
   if (allocatedTemporaries < REG_T7 - REG_A3)
@@ -2798,8 +2995,21 @@ int load_variable(int* variable) {
 
 void load_integer(int value) {
   // assert: value >= 0 or value == INT_MIN
+  //hw6
+  int signChanged;
 
   talloc();
+
+  //hw6 start
+  if(value<0){
+    if(value!=INT_MIN){
+      value=-value;
+      signChanged=1;
+    }else
+      signChanged=0;
+  }else
+    signChanged=0;
+  //hw6 end
 
   if (value >= 0) {
     if (value < twoToThePowerOf(15))
@@ -2828,29 +3038,20 @@ void load_integer(int value) {
       // and finally add the remaining 3 lsbs
       emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), rightShift((value << 29), 29));
     }
-  } else {
-    if(value != INT_MIN){
-      value = -value;
-      if (value < twoToThePowerOf(15))
-        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), value);
-      else if (value < twoToThePowerOf(28)) {
-        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), rightShift(value, 14));
-        emitLeftShiftBy(14);
-        emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), rightShift((value << 18), 18));
-      }else{
-        emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), rightShift(value, 17));
-        emitLeftShiftBy(14);
-        emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), rightShift((value << 15), 18));
-        emitLeftShiftBy(3);
-        emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), rightShift((value << 29), 29));
-      }
-      emitRFormat(OP_SPECIAL,REG_ZR,currentTemporary(),currentTemporary(), 0, FCT_SUBU);
-    }else {
-      emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), twoToThePowerOf(14));
-      emitLeftShiftBy(14);
-      emitLeftShiftBy(3);
-    }
+  } else if (value == INT_MIN) {
+    // load largest positive 16-bit number with a single bit set: 2^14
+    emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), twoToThePowerOf(14));
+
+    // and then multiply 2^14 by 2^14*2^3 to get to 2^31 == INT_MIN
+    emitLeftShiftBy(14);
+    emitLeftShiftBy(3);
+  } 
+
+  //hw6 start
+  if(signChanged){
+    emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
   }
+  //hw6 end
 }
 
 void load_string(int* string) {
@@ -2940,8 +3141,7 @@ void help_procedure_epilogue(int parameters) {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, (parameters + 1) * WORDSIZE);
 
   // return
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 int gr_call(int* procedure) {
@@ -2962,6 +3162,13 @@ int gr_call(int* procedure) {
   if (isExpression()) {
     gr_expression();
 
+    //hw6 start
+    if(valueAvailable){
+      load_integer(value);
+      valueAvailable=0;
+    }
+    //hw6 end
+
     // TODO: check if types/number of parameters is correct
 
     // push first parameter onto stack
@@ -2974,6 +3181,13 @@ int gr_call(int* procedure) {
       getSymbol();
 
       gr_expression();
+
+      //hw6 start
+      if(valueAvailable){
+        load_integer(value);
+        valueAvailable=0;
+      }
+      //hw6 end
 
       // push more parameters onto stack
       emitIFormat(OP_ADDIU, REG_SP, REG_SP, -WORDSIZE);
@@ -3016,11 +3230,14 @@ int gr_factor() {
   int hasCast;
   int cast;
   int type;
+  //hw7 start
+  int selectorNum;
+  int* entry;
+  //hw7 end
 
   int* variableOrProcedureName;
 
   // assert: n = allocatedTemporaries
-
   hasCast = 0;
 
   type = INT_T;
@@ -3067,18 +3284,72 @@ int gr_factor() {
   // dereference?
   if (symbol == SYM_ASTERISK) {
     getSymbol();
-
     // ["*"] identifier
     if (symbol == SYM_IDENTIFIER) {
-      type = load_variable(identifier);
-
+      //hw7 start
       getSymbol();
+      //["*"] identifier [ selector ] 
+      if(symbol == SYM_LSQRBRACKET){
+        entry = global_symbol_table;
+
+        entry = searchSymbolTable(entry, identifier, ARRAY);
+
+        if((int) entry == 0){
+          printLineNumber((int*) "error", lineNumber);
+          print(variableOrProcedureName);
+          print((int*) " undeclared");
+          println();
+
+          exit(-1);
+        }
+
+        type = getType(entry);
+
+        //initialize address register with startaddress of array
+        load_integer(getAddress(entry));
+        emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+
+        selectorNum = 1;
+        while(symbol == SYM_LSQRBRACKET){
+          getSymbol();
+
+          gr_selector(selectorNum, entry);
+
+          selectorNum = selectorNum +1;
+        }
+
+        //in case of to few dimension an pointer at the first entry of first lost dimension will be returned
+        if((selectorNum-1)<getDimensions(entry)){
+          if(type != INT_T){
+            typeWarning(INT_T, type);
+          }
+        }else{
+          if(type != INTSTAR_T){
+            typeWarning(INTSTAR_T, type);
+          }
+          //load pointer from specified array position
+          emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);  
+        }
+        
+        type = INT_T;
+      //hw7 end
+      }else
+        type = load_variable(identifier);
+
+      //hw7 getSymbol();
 
     // * "(" expression ")"
     } else if (symbol == SYM_LPARENTHESIS) {
       getSymbol();
 
       type = gr_expression();
+
+      //hw6 start
+      if(valueAvailable){
+        load_integer(value);
+        valueAvailable=0;
+      }
+      //hw6 end
 
       if (symbol == SYM_RPARENTHESIS)
         getSymbol();
@@ -3094,7 +3365,78 @@ int gr_factor() {
     emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
 
     type = INT_T;
+    //hw5 start
+    //not?
+  } else if(symbol == SYM_NOT_BITW){
+    getSymbol();
 
+    if(symbol == SYM_IDENTIFIER){
+      //hw7 start
+      getSymbol();
+      //["~"] identifier [ selector ] 
+      if(symbol == SYM_LSQRBRACKET){
+        entry = global_symbol_table;
+
+        entry = searchSymbolTable(entry, identifier, ARRAY);
+
+        if((int) entry == 0){
+          printLineNumber((int*) "error", lineNumber);
+          print(variableOrProcedureName);
+          print((int*) " undeclared");
+          println();
+
+          exit(-1);
+        }
+
+        type = getType(entry);
+
+        //initialize address register with startaddress of array
+        load_integer(getAddress(entry));
+        emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+
+        selectorNum = 1;
+        while(symbol == SYM_LSQRBRACKET){
+          getSymbol();
+
+          gr_selector(selectorNum, entry);
+
+          selectorNum = selectorNum +1;
+        }
+
+        //in case of to few dimension an pointer at the first entry of first lost dimension will be returned
+        if((selectorNum-1)<getDimensions(entry)){
+          type = INTSTAR_T;
+        }else{
+          //load data from specified array position
+          emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+        }
+      //hw7 end
+      }else
+        type = load_variable(identifier);
+
+    // * "(" expression ")"
+    } else if (symbol == SYM_LPARENTHESIS) {
+      getSymbol();
+
+      type = gr_expression();
+
+      //hw6 start
+      if(valueAvailable){
+        load_integer(value);
+        valueAvailable=0;
+      }
+      //hw6 end
+      
+      if (symbol == SYM_RPARENTHESIS)
+        getSymbol();
+      else
+        syntaxErrorSymbol(SYM_RPARENTHESIS);
+    } else
+      syntaxErrorUnexpected();
+
+    emitRFormat(OP_SPECIAL, currentTemporary(), 0, currentTemporary(), FCT_NOR);
+
+  //hw5 ende
   // identifier?
   } else if (symbol == SYM_IDENTIFIER) {
     variableOrProcedureName = identifier;
@@ -3115,15 +3457,57 @@ int gr_factor() {
       // reset return register to initial return value
       // for missing return expressions
       emitIFormat(OP_ADDIU, REG_ZR, REG_V0, 0);
+      
+      //hw7 start
+      // identifier [ selector ]
+    }else if(symbol == SYM_LSQRBRACKET){
+      entry = global_symbol_table;
+        
+      entry = searchSymbolTable(entry, variableOrProcedureName, ARRAY);
+
+      if((int) entry == 0){
+        printLineNumber((int*) "error", lineNumber);
+        print(variableOrProcedureName);
+        print((int*) " undeclared");
+        println();
+
+        exit(-1);
+      }
+
+      type = getType(entry);
+
+      //initialize address register with startaddress of array
+      load_integer(getAddress(entry));
+      emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+
+      selectorNum = 1;
+      while(symbol == SYM_LSQRBRACKET){
+        getSymbol();
+
+        gr_selector(selectorNum, entry);
+
+        selectorNum = selectorNum +1;
+      }
+
+      //in case of to few dimension an pointer at the first entry of first lost dimension will be returned
+      if((selectorNum-1)<getDimensions(entry)){
+        type = INTSTAR_T;
+      }else{
+        //load data from specified array position
+        emitIFormat(OP_LW, currentTemporary(), currentTemporary(), 0);
+      }
+
+      //hw7 end
     } else
       // variable access: identifier
       type = load_variable(variableOrProcedureName);
 
   // integer?
-  }else if (symbol == SYM_INTEGER) {
-    //Assignment6
-    currConstant = 1;
-    currVal = literal;
+  } else if (symbol == SYM_INTEGER) {
+    //hw6 start
+    value=literal;
+    valueAvailable=1;
+    //hw6 end
 
     getSymbol();
 
@@ -3161,7 +3545,6 @@ int gr_factor() {
     syntaxErrorUnexpected();
 
   // assert: allocatedTemporaries == n + 1
-
   if (hasCast)
     return cast;
   else
@@ -3172,24 +3555,23 @@ int gr_term() {
   int ltype;
   int operatorSymbol;
   int rtype;
-  // hw 6
-  int lVal;
-  int lConstant;
-  lVal = 0;
-  lConstant = 0;
+  //hw6 start
+  int firstValue;
+  int firstValueAvailable;
+  int variableFound;
+  //hw6 end
   // assert: n = allocatedTemporaries
 
   ltype = gr_factor();
-//////////////////////////////////////////////////////////////
-  // hw 6
-  if(currConstant){
-    lVal = currVal;
-    lConstant = currConstant;
-  }
-  currConstant = 0;
-  currVal = 0;
-//////////////////////////////////////////////////////////////
-
+  //hw6 start
+  firstValue=value;
+  firstValueAvailable=valueAvailable;
+  valueAvailable=0;
+  if(firstValueAvailable)
+    variableFound=0;
+  else
+    variableFound=1;
+  //hw6 end
   // assert: allocatedTemporaries == n + 1
 
   // * / or % ?
@@ -3201,141 +3583,315 @@ int gr_term() {
     rtype = gr_factor();
 
     // assert: allocatedTemporaries == n + 2
-    // hw 6
+
     if (ltype != rtype)
       typeWarning(ltype, rtype);
 
-    if(lConstant){
-      if(currConstant){ 
-        if(operatorSymbol == SYM_ASTERISK){ 
-          lVal = lVal * currVal;
-        }else if(operatorSymbol == SYM_DIV){ 
-          lVal = lVal / currVal;
-        }else if (operatorSymbol == SYM_MOD){ 
-          lVal = lVal % currVal;
+    //hw6 start
+    if (operatorSymbol == SYM_ASTERISK) {
+      if(firstValueAvailable){
+        //there was a value found before
+        if(valueAvailable){
+          firstValue=firstValue*value;
+          valueAvailable=0;
+        }else{
+          if(variableFound){
+            //right operand is the second variable found
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+            tfree(1);
+          }else{
+            //right operand is the first variable found
+            variableFound=1;
+          }
         }
-    
-      }else { 
-        if (operatorSymbol == SYM_ASTERISK){ 
-          load_integer(lVal);
-          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0,0, FCT_MULTU);
-          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), 0,FCT_MFLO);
-
-        }else if (operatorSymbol == SYM_DIV){ 
-          load_integer(lVal);
-          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0,0, FCT_DIVU);
-          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFLO);
-      
-        }else if (operatorSymbol == SYM_MOD){ 
-          load_integer(lVal);
-          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0,0,FCT_DIVU);
-          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), 0,FCT_MFHI);
+      }else{
+        //no value found yet
+        if(valueAvailable){
+          firstValueAvailable=1;
+          firstValue=value;
+          valueAvailable=0;
+        }else{
+          //right operand is a variable
+          if(variableFound){
+            //there was a variable found before
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+            tfree(1);
+          }else{
+            //first found variable
+            variableFound=1;
+          }
         }
-        tfree(1);
-        lConstant = 0;
       }
-    }else { 
-      if(currConstant == 1) { 
-        if (operatorSymbol == SYM_ASTERISK){ 
-          load_integer(currVal);
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0,0, FCT_MULTU);
-          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFLO);
-
-        }else if(operatorSymbol == SYM_DIV){ 
-          load_integer(currVal);
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0,0, FCT_DIVU);
-          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFLO);
-
-        }else if(operatorSymbol == SYM_MOD){ 
-          load_integer(currVal);
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, 0,FCT_DIVU);
-          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFHI);
+    } else if (operatorSymbol == SYM_DIV) {
+      //attention: division must be done immediatelly because of integer division
+      if(variableFound){
+        if(firstValueAvailable){
+          //so it's necessary to multiply former values and variables before devision
+          load_integer(firstValue);
+          firstValueAvailable=0;
+          if(valueAvailable){
+            load_integer(value);
+            valueAvailable=0;
+            emitRFormat(OP_SPECIAL, previousPreviousTemporary(), previousTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousPreviousTemporary(), FCT_MFLO);
+            //attention: divisor lays at register n-2
+            emitRFormat(OP_SPECIAL, previousPreviousTemporary(), currentTemporary(), 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousPreviousTemporary(), FCT_MFLO);
+            tfree(2);
+          }else{
+            //attention: divisor was loaded into register before dividend
+            emitRFormat(OP_SPECIAL, previousPreviousTemporary(), currentTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousPreviousTemporary(), FCT_MFLO);
+            tfree(1);
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+            tfree(1);
+          }
+        }else{
+          if(valueAvailable){
+            load_integer(value);
+            valueAvailable=0; 
+          }
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+          tfree(1);
         }
-        tfree(1);
-        lConstant = 0;
-    
-      }else { 
-        if(operatorSymbol == SYM_ASTERISK){ 
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0,0, FCT_MULTU);
-          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFLO);
-
-        }else if(operatorSymbol == SYM_DIV){ 
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0,0, FCT_DIVU);
-          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFLO);
-
-        }else if(operatorSymbol == SYM_MOD){ 
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0,0, FCT_DIVU);
-          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(),0, FCT_MFHI);
+      }else{
+        //if no variable is found, the first factor must have been a constant, so firstValue is available for sure
+        if(valueAvailable){
+          firstValue=firstValue/value;
+          valueAvailable=0;
+        }else{
+          load_integer(firstValue);
+          firstValueAvailable=0;
+          variableFound=1;
+          //attention: divisor was loaded into register before dividend
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+          tfree(1);
         }
-        tfree(1);
-        lConstant = 0;
+      }
+    } else if (operatorSymbol == SYM_MOD) {
+      //attention: modulo must be done immediatelly because of integer devision
+      if(variableFound){
+        if(firstValueAvailable){
+          //so it's necessary to multiply former values and variables before devision
+          load_integer(firstValue);
+          firstValueAvailable=0;
+          if(valueAvailable){
+            load_integer(value);
+            valueAvailable=0;
+            emitRFormat(OP_SPECIAL, previousPreviousTemporary(), previousTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousPreviousTemporary(), FCT_MFLO);
+            //attention: divisor lays at register n-2
+            emitRFormat(OP_SPECIAL, previousPreviousTemporary(), currentTemporary(), 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousPreviousTemporary(), FCT_MFHI);
+            tfree(2);
+          }else{
+            //attention: divisor was loaded into register before dividend
+            emitRFormat(OP_SPECIAL, previousPreviousTemporary(), currentTemporary(), 0, FCT_MULTU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousPreviousTemporary(), FCT_MFLO);
+            tfree(1);
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
+            emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+            tfree(1);
+          }
+        }else{
+          if(valueAvailable){
+            load_integer(value);
+            valueAvailable=0; 
+          }
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+          tfree(1);
+        }
+      }else{
+        //if no variable is found, the first factor must have been a constant, so firstValue is available for sure
+        if(valueAvailable){
+          firstValue=firstValue%value;
+          valueAvailable=0;
+        }else{
+          load_integer(firstValue);
+          firstValueAvailable=0;
+          variableFound=1;
+          //attention: divisor was loaded into register before dividend
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), 0, FCT_DIVU);
+          emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFHI);
+          tfree(1);
+        }
       }
     }
-    currVal = 0;
-    currConstant = 0;
   }
+  //if firstValue is still available and a variable was found, it's necessary to compute the result of the whole calculation.
+  if(firstValueAvailable){
+    if(variableFound){
+      load_integer(firstValue);
+      firstValueAvailable=0;
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+      tfree(1);
+    }else{
+      value=firstValue;
+      valueAvailable=1;
+    }
+  }
+  //hw6 end
 
-  if(lConstant) { 
-    currConstant = 1;
-    currVal = lVal;
-  }else{ 
-    currVal = 0;
-    currConstant = 0;
-  }
+  // assert: allocatedTemporaries == n + 1
   return ltype;
-  // hw 6 bis hier neu
 }
+
+//hw6 start
+void checkpoint(int nr){
+  print((int*) "checkpoint ");
+  printInteger(nr);
+  print((int*) " reached");
+  println();
+}
+//hw6 end
+
+//hw4 start
+int gr_shiftExpression(){
+  int operatorSymbol;
+  int ltype;
+  int rtype;
+  //hw6 start
+  int firstValue;
+  int firstValueAvailable;
+  //hw6 end
+
+  ltype = gr_simpleExpression();
+
+  //hw6 start
+  firstValueAvailable=0;
+  if(valueAvailable){
+    firstValueAvailable=1;
+    firstValue=value;
+    valueAvailable=0;
+  }
+  //hw6 end
+  while(isShift()){
+    operatorSymbol = symbol;
+
+    getSymbol();
+
+    rtype = gr_simpleExpression();
+
+    //hw6 start
+    if(valueAvailable){
+      if(value<0|value>31){
+        printLineNumber((int*) "error", lineNumber);
+        print((int*) "unallowed shift of ");
+        printInteger(value);
+        print((int*) " bits");
+        println();
+        exit(-1);
+      }
+    }
+    //hw6 end
+
+    if(rtype != INT_T){
+      typeWarning(INT_T, rtype);
+    }
+
+    if(firstValueAvailable){
+      if(valueAvailable){
+        if(operatorSymbol == SYM_LEFTSHIFT){
+          firstValue=firstValue<<value;
+        }else if(operatorSymbol == SYM_RIGHTSHIFT){
+          firstValue=firstValue>>value;
+        }
+        valueAvailable=0;
+      }else{
+        load_integer(firstValue);
+        firstValueAvailable=0;
+        if(operatorSymbol == SYM_LEFTSHIFT){
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLLV);
+        } else if(operatorSymbol == SYM_RIGHTSHIFT){
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SRLV);
+        }
+        tfree(1);
+      }
+    }else{
+      if(valueAvailable){
+        if(operatorSymbol == SYM_LEFTSHIFT){
+          emitRFormatExtended(OP_SPECIAL, 0, currentTemporary(), currentTemporary(), value, FCT_SLL);
+        } else if(operatorSymbol == SYM_RIGHTSHIFT){
+          emitRFormatExtended(OP_SPECIAL, 0, currentTemporary(), currentTemporary(), value, FCT_SRL);
+        }
+        valueAvailable=0;
+      }else{
+        if(operatorSymbol == SYM_LEFTSHIFT){
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLLV);
+        } else if(operatorSymbol == SYM_RIGHTSHIFT){
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SRLV);
+        }
+        tfree(1);
+      }
+    }
+  }
+  //hw6 start
+  if(firstValueAvailable){
+    valueAvailable=1;
+    value=firstValue;
+    firstValueAvailable=0;
+  }
+  //hw6 end
+  return ltype;
+}
+//hw4 ende
 
 int gr_simpleExpression() {
   int sign;
-  int not;
   int ltype;
   int operatorSymbol;
   int rtype;
-  // hw 6
-  int lVal;
-  int lConstant;
-  lVal = 0;
-  lConstant = 0;
+  //hw6 start
+  int firstValue;
+  int firstValueAvailable;
+  int variableFound;
+  //hw6 end
+
   // assert: n = allocatedTemporaries
 
-  // hw 5
-  if (symbol == SYM_BITWISE_NOT){
-    sign = 0;
-    not = 1;
-    getSymbol();
-
   // optional: -
-  }else if (symbol == SYM_MINUS) {
-    sign = 1;
-    not = 0;
+  if (symbol == SYM_MINUS) {
+      sign = 1;
 
-    mayBeINTMIN = 1;
-    isINTMIN    = 0;
+      mayBeINTMIN = 1;
+      isINTMIN    = 0;
 
-    getSymbol();
+      getSymbol();
 
-    mayBeINTMIN = 0;
+      mayBeINTMIN = 0;
 
-    if (isINTMIN) {
-      isINTMIN = 0;
+      if (isINTMIN) {
+        isINTMIN = 0;
 
-      // avoids 0-INT_MIN overflow when bootstrapping
-      // even though 0-INT_MIN == INT_MIN
-      sign = 0;
-    }
-  } else{
-    sign = 0;
-    not = 0;
+        // avoids 0-INT_MIN overflow when bootstrapping
+        // even though 0-INT_MIN == INT_MIN
+        sign = 0;
+      }
+  }else{
+    sign=0;
   }
+
   ltype = gr_term();
-//////////////////////////////////////////////////////////////
-  // hw 6
-  if (currConstant) { //int
-    lVal = currVal;
-    lConstant = currConstant;
+
+  //hw6 start
+  if(valueAvailable){
+    variableFound=0;
+    firstValueAvailable=1;
+    firstValue=value;
+    valueAvailable=0;
+  }else{
+    variableFound=1;
+    firstValue=0;
+    firstValueAvailable=0;
   }
-//////////////////////////////////////////////////////////////
+  //hw6 end
 
   // assert: allocatedTemporaries == n + 1
 
@@ -3345,199 +3901,295 @@ int gr_simpleExpression() {
 
       ltype = INT_T;
     }
-    // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-    // hw 6
-    if(lConstant){
-      lVal = 0 - lVal;
+    //hw6 start
+    if(firstValueAvailable){
+      firstValue=-firstValue;
     }else{
-      emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), 0, FCT_SUBU);
+      emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), currentTemporary(), FCT_SUBU);
     }
+    //hw6 end
   }
-// hw 6
-  currConstant = 0;
-  currVal = 0;
-
-  // hw 5
-  if (not){
-    emitRFormat(OP_SPECIAL, currentTemporary(), REG_ZR, currentTemporary(), 0, FCT_NOR);
-  }
-  
   // + or -?
   while (isPlusOrMinus()) {
     operatorSymbol = symbol;
 
     getSymbol();
-
     rtype = gr_term();
 
-    // hw 6
-    if (lConstant){
-      if(currConstant){ 
-          if(operatorSymbol == SYM_PLUS){ 
-            lVal = lVal + currVal;
-          }else if(operatorSymbol == SYM_MINUS){ 
-            lVal = lVal - currVal;
+    // assert: allocatedTemporaries == n + 2
+
+    if (operatorSymbol == SYM_PLUS) {
+      if (ltype == INTSTAR_T) {
+        if (rtype == INT_T){
+          // pointer arithmetic: factor of 2^2 of integer operand
+          //hw6 start
+          if(valueAvailable){
+            value=value*4;
+            //check for integer overflow
+            if((INT_MAX-firstValue)<value){
+              if(variableFound){
+                //force calculation of former summands to avoid integer overflow
+                if((firstValue<=INT16_MAX)&(firstValue>=INT16_MIN)){
+                  emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), firstValue);
+                }else{
+                  load_integer(firstValue);
+                  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+                  tfree(1);
+                }
+                firstValue=value;
+              }else{
+                syntaxErrorMessage((int*) "sum of integer literals out of bound");
+                exit(-1);
+              }
+            }else{
+              firstValue=firstValue+value;
+              firstValueAvailable=1;
+            }
+            valueAvailable=0;
+          }else{
+            emitLeftShiftBy(2);
+            if(variableFound){
+              emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+              tfree(1);
+            }else{
+              variableFound=1;
+            }
           }
-      
-      }else{ 
-        load_integer(lVal);
-      
-        if(operatorSymbol == SYM_PLUS){
-          if(ltype == INTSTAR_T){
-            if(rtype == INT_T)
-              emitLeftShiftBy(2);
-          }else if(rtype == INTSTAR_T)
-            typeWarning(ltype, rtype);
-
-          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(),0, FCT_ADDU);
-          
-        } else if(operatorSymbol == SYM_MINUS) { 
-          if(ltype != rtype)
-            typeWarning(ltype, rtype);
-
-          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(),0, FCT_SUBU);
-      
+          //hw6 end
         }
-        tfree(1);
+      } else{ 
+        if (rtype == INTSTAR_T)
+          //fehler?
+          typeWarning(ltype, rtype);
 
-        lConstant = 0;
+        //hw6 start
+        if(valueAvailable){
+          if(firstValueAvailable){
+            //check for integer overflow
+            if((INT_MAX-firstValue)<value){
+              if(variableFound){
+                //force calculation of former summands to avoid integer overflow
+                if((firstValue<=INT16_MAX)&(firstValue>=INT16_MIN)){
+                  emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), firstValue);
+                }else{
+                  load_integer(firstValue);
+                  emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+                  tfree(1);
+                }
+                firstValue=value;
+              }else{
+                syntaxErrorMessage((int*) "sum of integer literals out of bound");
+                exit(-1);
+              }
+            }else{
+              firstValue=firstValue+value;
+            }
+          }else{
+            firstValueAvailable=1;
+            firstValue=value;  
+          }
+          valueAvailable=0;
+        }else{
+          if(variableFound){
+            emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+            tfree(1);
+          }else{
+            variableFound=1;
+          }
+        }
       }
-    } else{ 
-      if(currConstant){
-        load_integer(currVal);
+      //hw6 end
 
-        if(operatorSymbol == SYM_PLUS){ 
-          if(ltype == INTSTAR_T){
-            if(rtype == INT_T)
-              emitLeftShiftBy(2);
-          }else if (rtype == INTSTAR_T)
-            typeWarning(ltype, rtype);
+    } else if (operatorSymbol == SYM_MINUS) {
+      if (ltype != rtype)
+        typeWarning(ltype, rtype);
 
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_ADDU);
-         
-        }else if (operatorSymbol == SYM_MINUS){ 
-          if(ltype != rtype)
-            typeWarning(ltype, rtype);
-
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_SUBU);   
+      //hw6 start
+      if(valueAvailable){
+        if(firstValueAvailable){
+          //check for integer overflow
+          if(firstValue<(INT_MIN+value)){
+            if(variableFound){
+              //force calculation of former summands to avoid integer overflow
+              if((firstValue<=INT16_MAX)&(firstValue>=INT16_MIN)){
+                emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), firstValue);
+              }else{
+                load_integer(firstValue);
+                emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+                tfree(1);
+              }
+              firstValue=-value;
+            }else{
+              syntaxErrorMessage((int*) "sum of integer literals out of bound");
+              exit(-1);
+            }
+          }else{
+            firstValue=firstValue-value;
+          }
+        }else{
+          firstValue=-value;
+          firstValueAvailable=1;
+        }
+        valueAvailable=0;
+      }else{
+        if(variableFound){
+          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
+        }else{
+          //attention: reversed order of operands
+          variableFound=1;
+          load_integer(firstValue);
+          firstValueAvailable=0;
+          emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SUBU);
         }
         tfree(1);
-        lConstant = 0;
-      }else{ 
-        if(operatorSymbol == SYM_PLUS){ 
-          if(ltype == INTSTAR_T) {
-            if(rtype == INT_T)
-              emitLeftShiftBy(2);
-          }else if (rtype == INTSTAR_T)
-            typeWarning(ltype, rtype);
-
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_ADDU);
-          
-        }else if(operatorSymbol == SYM_MINUS) { 
-          if(ltype != rtype)
-            typeWarning(ltype, rtype);
-
-          emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(),0, FCT_SUBU);
-          
-        }
-        tfree(1);
-        lConstant = 0;
       }
+      //hw6 end
     }
-
-  currConstant = 0;
-  currVal = 0;
-
   }
 
-  if(lConstant){ 
-    currConstant = 1;
-    currVal = lVal;
-  }else{
-    currConstant = 0;
-    currVal = 0;
+  //hw6 start
+  //if firstValue is still available and a variable was found, it's necessary to compute the result of the whole calculation.
+  if(firstValueAvailable){
+    if(variableFound){
+      if((firstValue<=INT16_MAX)&(firstValue>=INT16_MIN)){
+        emitIFormat(OP_ADDIU, currentTemporary(), currentTemporary(), firstValue);
+      }else{
+        load_integer(firstValue);
+        emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+        tfree(1);
+      }
+    }else{
+      value=firstValue;
+      valueAvailable=1;
+    }
+    firstValueAvailable=0;
   }
+  //hw6 end
+
+  // assert: allocatedTemporaries == n + 1
 
   return ltype;
 }
-// hw 6 bis hier neu
 
-///////////////////////////////////////////////////////////////////////
-// Tabea hw4
-int gr_shiftExpression(){ 
+//hw5 start
+int gr_expression(){
   int ltype;
-  int operatorSymbol;
   int rtype;
-  // hw 6
-  int lVal;
-  int lConstant;
-  lConstant = 0;
-  lVal = 0;
+  int operatorSymbol;
+  //hw6 start
+  int firstValue;
+  int firstValueAvailable;
+  int singleOperand;
+  //hw6 end
 
-  ltype = gr_simpleExpression();
+  ltype=gr_compExpression();
 
-  // hw 6
-  if(currConstant){
-    lConstant = currConstant;
-    lVal = currVal;
-    load_integer(lVal);
+  //hw6 start
+  singleOperand=1;
+  firstValueAvailable=0;
+  if(valueAvailable){
+    firstValueAvailable=1;
+    firstValue=value;
+    valueAvailable=0;
   }
-  currConstant = 0;
-  currVal = 0;
+  //hw6 end
 
-  // optional: <<, >>
-  while(isShiftSymbol()){
-    operatorSymbol = symbol;
+  while(isAndOrOr()){
+    operatorSymbol=symbol;
+
+    //hw6 start
+    if(singleOperand){
+      if(firstValueAvailable){
+        load_integer(firstValue);
+        firstValueAvailable=0;
+      }
+    }
+    singleOperand=0;
+    //hw6 end
 
     getSymbol();
 
-    rtype = gr_simpleExpression();
+    rtype=gr_compExpression();
 
-    // hw 6
-    lVal = 0;
-    lConstant = 0;
+    //hw6 start
+    if(valueAvailable){
+      load_integer(value);
+      valueAvailable=0;
+    }
+    //hw6 end
 
-    if(currConstant){
-    lVal = currVal;
-    lConstant = currConstant;
-    load_integer(lVal);
-  }
-  currConstant = 0;
-  currVal = 0;
+    if(operatorSymbol==SYM_AND_BITW){
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_AND);
+    }else{
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_OR);
+    }
 
-    if (operatorSymbol == SYM_LEFTSHIFT) {
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLLV);
-    
-    } else if (operatorSymbol == SYM_RIGHTSHIFT) {
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SRLV);
-  
+    tfree(1);
   }
-  tfree(1);
+
+  //hw6 start
+  if(singleOperand){
+    if(firstValueAvailable){
+      valueAvailable=1;
+      value=firstValue;
+      firstValueAvailable=0;
+    }
   }
-  // assert: allocatedTemporaries == n + 1
+  //hw6 end
+
   return ltype;
 }
-///////////////////////////////////////////////////////////////////////
+//hw5 end
 
-// hw 5
-int gr_comparisonExpression() {
+//hw5 name changed
+int gr_compExpression() {
   int ltype;
   int operatorSymbol;
   int rtype;
+  //hw6 start
+  int firstValue;
+  int firstValueAvailable;
+  int singleOperand;
+  //hw6 end
 
   // assert: n = allocatedTemporaries
-
+  //hw4 
   ltype = gr_shiftExpression();
 
   // assert: allocatedTemporaries == n + 1
+  //hw6 start
+  singleOperand=1;
+  firstValueAvailable=0;
+  if(valueAvailable){
+    firstValueAvailable=1;
+    firstValue=value;
+    valueAvailable=0;
+  }
+  //hw6 end
 
   //optional: ==, !=, <, >, <=, >= simpleExpression
   if (isComparison()) {
     operatorSymbol = symbol;
+    //hw6 start
+    if(singleOperand){
+      if(firstValueAvailable){
+        load_integer(firstValue);
+        firstValueAvailable=0;
+      }
+    }
+    singleOperand=0;
+    //hw6 end
 
     getSymbol();
-
+    //hw4 
     rtype = gr_shiftExpression();
+
+    //hw6 start
+    if(valueAvailable){
+      load_integer(value);
+      valueAvailable=0;
+    }
+    //hw6 end
 
     // assert: allocatedTemporaries == n + 2
 
@@ -3546,9 +4198,7 @@ int gr_comparisonExpression() {
 
     if (operatorSymbol == SYM_EQUALITY) {
       // subtract, if result = 0 then 1, else 0
-
-
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SUBU);
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
 
       tfree(1);
 
@@ -3559,9 +4209,7 @@ int gr_comparisonExpression() {
 
     } else if (operatorSymbol == SYM_NOTEQ) {
       // subtract, if result = 0 then 0, else 1
-
-
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SUBU);
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SUBU);
 
       tfree(1);
 
@@ -3572,25 +4220,19 @@ int gr_comparisonExpression() {
 
     } else if (operatorSymbol == SYM_LT) {
       // set to 1 if a < b, else 0
-
-
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SLT);
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
 
       tfree(1);
 
     } else if (operatorSymbol == SYM_GT) {
       // set to 1 if b < a, else 0
-
-
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLT);
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
 
       tfree(1);
 
     } else if (operatorSymbol == SYM_LEQ) {
       // if b < a set 0, else 1
-
-
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_SLT);
+      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), FCT_SLT);
 
       tfree(1);
 
@@ -3601,9 +4243,7 @@ int gr_comparisonExpression() {
 
     } else if (operatorSymbol == SYM_GEQ) {
       // if a < b set 0, else 1
-
-
-      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), 0, FCT_SLT);
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_SLT);
 
       tfree(1);
 
@@ -3613,65 +4253,21 @@ int gr_comparisonExpression() {
       emitIFormat(OP_ADDIU, REG_ZR, currentTemporary(), 0);
     }
   }
-
-  // assert: allocatedTemporaries == n + 1
-
-  return ltype;
-}
-
-int isBitwiseAndOr(){
-  if(symbol == SYM_BITWISE_AND){
-    return 1;
-  }else if(symbol == SYM_BITWISE_OR){
-    return 1;
-  }else{
-    return 0;
-  }
-}
-///////////////////////////////////////////////////////////////////////////
-// hw 5
-int gr_expression() {
-  int ltype;
-  int operatorSymbol;
-  int rtype;
-
-  // assert: n = allocatedTemporaries
-
-  ltype = gr_comparisonExpression();
-
-  // assert: allocatedTemporaries == n + 1
-
-  //optional: ==, !=, <, >, <=, >= simpleExpression
-  while (isBitwiseAndOr()) { //davor if
-    operatorSymbol = symbol;
-
-    getSymbol();
-
-    rtype = gr_comparisonExpression();
-
-    // assert: allocatedTemporaries == n + 2
-
-    //if (ltype != rtype)
-      //typeWarning(ltype, rtype);
-
-    if (operatorSymbol == SYM_BITWISE_AND) {
-
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_AND);
-
-    } else if (operatorSymbol == SYM_BITWISE_OR) {
-
-      emitRFormat(OP_SPECIAL, currentTemporary(), previousTemporary(), previousTemporary(), 0, FCT_OR);
-
+  //hw6 start
+  if(singleOperand){
+    if(firstValueAvailable){
+      valueAvailable=1;
+      value=firstValue;
+      firstValueAvailable=0;
     }
-  
-  tfree(1);
- }
+  }
+  //hw6 end
 
   // assert: allocatedTemporaries == n + 1
 
   return ltype;
 }
-///////////////////////////////////////////////////////////////////////////
+
 void gr_while() {
   int brBackToWhile;
   int brForwardToEnd;
@@ -3690,6 +4286,12 @@ void gr_while() {
       getSymbol();
 
       gr_expression();
+      //hw6 start
+      if(valueAvailable){
+        load_integer(value);
+        valueAvailable=0;
+      }
+      //hw6 end
 
       // do not know where to branch, fixup later
       brForwardToEnd = binaryLength;
@@ -3753,6 +4355,13 @@ void gr_if() {
       getSymbol();
 
       gr_expression();
+
+      //hw6 start
+      if(valueAvailable){
+        load_integer(value);
+        valueAvailable=0;
+      }
+      //hw6 end
 
       // if the "if" case is not true, we branch to "else" (if provided)
       brForwardToElseOrEnd = binaryLength;
@@ -3844,12 +4453,18 @@ void gr_return() {
   if (symbol != SYM_SEMICOLON) {
     type = gr_expression();
 
+    //hw6 start
+      if(valueAvailable){
+        load_integer(value);
+        valueAvailable=0;
+      }
+      //hw6 end
+
     if (type != returnType)
       typeWarning(returnType, type);
 
     // save value of expression in return register
-    // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-    emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), REG_V0, 0, FCT_ADDU);
+    emitRFormat(OP_SPECIAL, REG_ZR, currentTemporary(), REG_V0, FCT_ADDU);
 
     tfree(1);
   } else if (returnType != VOID_T)
@@ -3873,6 +4488,7 @@ void gr_statement() {
   int rtype;
   int* variableOrProcedureName;
   int* entry;
+  int selectorNum;
 
   // assert: allocatedTemporaries == 0;
 
@@ -3891,18 +4507,30 @@ void gr_statement() {
 
     // "*" identifier
     if (symbol == SYM_IDENTIFIER) {
-      ltype = load_variable(identifier);
-
-      if (ltype != INTSTAR_T)
-        typeWarning(INTSTAR_T, ltype);
+      //hw7 
+      variableOrProcedureName = identifier;
 
       getSymbol();
 
       // "*" identifier "="
       if (symbol == SYM_ASSIGN) {
+        //hw7 start moved from outside of if inside
+        ltype = load_variable(identifier);
+
+        if (ltype != INTSTAR_T)
+          typeWarning(INTSTAR_T, ltype);
+        //hw7 end
+
         getSymbol();
 
         rtype = gr_expression();
+
+        //hw6 start
+        if(valueAvailable){
+          load_integer(value);
+          valueAvailable=0;
+        }
+        //hw6 end
 
         if (rtype != INT_T)
           typeWarning(INT_T, rtype);
@@ -3912,6 +4540,67 @@ void gr_statement() {
         tfree(2);
 
         numberOfAssignments = numberOfAssignments + 1;
+        //hw7 start
+        //"*" identifier [ selector ] "=" 
+      }else if(symbol == SYM_LSQRBRACKET){
+        entry = global_symbol_table;
+        
+        entry = searchSymbolTable(entry, variableOrProcedureName, ARRAY);
+
+        if((int) entry == 0){
+          printLineNumber((int*) "error", lineNumber);
+          print(variableOrProcedureName);
+          print((int*) " undeclared");
+          println();
+
+          exit(-1);
+        }
+
+        ltype = getType(entry);
+        if(ltype != INTSTAR_T){
+          typeWarning(INTSTAR_T, ltype);
+        }
+
+        //initialize address register with startaddress of array
+        load_integer(getAddress(entry));
+        emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+
+        selectorNum = 1;
+        while(symbol == SYM_LSQRBRACKET){
+          getSymbol();
+
+          gr_selector(selectorNum, entry);
+
+          selectorNum = selectorNum +1;
+        }
+
+        if(symbol != SYM_ASSIGN){
+          syntaxErrorSymbol(SYM_ASSIGN);
+        }
+        getSymbol();
+
+        rtype = gr_expression();
+
+        //gr_expression must return an int
+        if(rtype != INT_T){
+          typeWarning(INT_T, rtype);
+        }
+
+        //value from constant folding
+        if(valueAvailable){
+          load_integer(value);
+          valueAvailable = 0;
+        }
+
+        //load pointer from specified array position
+        emitIFormat(OP_LW, previousTemporary(), previousTemporary(), 0);
+
+        //store value to pointed address
+        emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+        tfree(2);
+
+        numberOfAssignments = numberOfAssignments + 1;
+      //hw7 end
       } else {
         syntaxErrorSymbol(SYM_ASSIGN);
 
@@ -3929,6 +4618,13 @@ void gr_statement() {
 
       ltype = gr_expression();
 
+      //hw6 start
+      if(valueAvailable){
+        load_integer(value);
+        valueAvailable=0;
+      }
+      //hw6 end
+
       if (ltype != INTSTAR_T)
         typeWarning(INTSTAR_T, ltype);
 
@@ -3940,6 +4636,13 @@ void gr_statement() {
           getSymbol();
 
           rtype = gr_expression();
+
+          //hw6 start
+          if(valueAvailable){
+            load_integer(value);
+            valueAvailable=0;
+          }
+          //hw6 end
 
           if (rtype != INT_T)
             typeWarning(INT_T, rtype);
@@ -3964,7 +4667,7 @@ void gr_statement() {
     } else
       syntaxErrorSymbol(SYM_LPARENTHESIS);
   }
-  // identifier "=" expression | call
+  // identifier [selector] "=" expression | call
   else if (symbol == SYM_IDENTIFIER) {
     variableOrProcedureName = identifier;
 
@@ -3995,6 +4698,13 @@ void gr_statement() {
 
       rtype = gr_expression();
 
+      //hw6 start
+      if(valueAvailable){
+        load_integer(value);
+        valueAvailable=0;
+      }
+      //hw6 end
+
       if (ltype != rtype)
         typeWarning(ltype, rtype);
 
@@ -4008,8 +4718,71 @@ void gr_statement() {
         getSymbol();
       else
         syntaxErrorSymbol(SYM_SEMICOLON);
-    } else
+      //hw7 start
+      // identifier [ selector ] = expression | call;
+    }else if(symbol == SYM_LSQRBRACKET){
+      entry = global_symbol_table;
+      
+      entry = searchSymbolTable(entry, variableOrProcedureName, ARRAY);
+      
+      if((int) entry == 0){
+        printLineNumber((int*) "error", lineNumber);
+        print(variableOrProcedureName);
+        print((int*) " undeclared");
+        println();
+
+        exit(-1);
+      }
+
+      ltype = getType(entry);
+      
+      //initialize address register with startaddress of array
+      load_integer(getAddress(entry));
+      emitRFormat(OP_SPECIAL, getScope(entry), currentTemporary(), currentTemporary(), FCT_ADDU);
+
+      //iterate through found selectors
+      selectorNum = 1;
+      while(symbol == SYM_LSQRBRACKET){
+        getSymbol();
+
+        gr_selector(selectorNum, entry);
+
+        selectorNum = selectorNum +1;
+      }
+
+      //search for assignment
+      if(symbol != SYM_ASSIGN){
+        syntaxErrorSymbol(SYM_ASSIGN);
+      }
+      getSymbol();
+
+      rtype = gr_expression();
+
+      if(ltype != rtype){
+        typeWarning(ltype, rtype);
+      }
+
+      //get value from constant folding
+      if(valueAvailable){
+        load_integer(value);
+        valueAvailable = 0;
+      }
+
+      //store new value
+      emitIFormat(OP_SW, previousTemporary(), currentTemporary(), 0);
+      tfree(2);
+
+      numberOfAssignments = numberOfAssignments + 1;
+
+      if(symbol != SYM_SEMICOLON){
+        syntaxErrorSymbol(SYM_SEMICOLON);
+      }
+      getSymbol();
+
+      //hw7 end
+    } else{
       syntaxErrorUnexpected();
+    }
   }
   // while statement?
   else if (symbol == SYM_WHILE) {
@@ -4294,12 +5067,79 @@ void gr_procedure(int* procedure, int type) {
   // assert: allocatedTemporaries == 0
 }
 
+//hw7 start
+int gr_selector(int selectorNum, int* entry){
+  int size;
+  int multiplier;
+  int type;
+  size = 0;
+
+  
+  if(arrayDeklaration){
+    getSymbol();
+    if(symbol != SYM_INTEGER & symbol != SYM_CHARACTER){
+      syntaxErrorMessage((int*) "size of array dimension must be a literal of type integer or char");
+
+      exit(-1);
+    }
+    size = literal;
+
+    getSymbol();
+  }else{
+    type = gr_simpleExpression();
+
+    //indices must ba integers
+    if(type != INT_T){
+      typeWarning(INT_T, type);
+    }
+    
+    //calculate address offset for this dimension
+    multiplier = getDimMultiplier(entry, selectorNum);
+    multiplier = multiplier * WORDSIZE;
+    if(multiplier == 0){
+      syntaxErrorMessage((int*) "too much dimensions used");
+
+      exit(-1);
+    }
+    
+    if(valueAvailable){
+      value = value * multiplier;
+      load_integer(value);
+      valueAvailable = 0;
+    }else{
+      load_integer(multiplier);
+
+      emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), 0, FCT_MULTU);
+      emitRFormat(OP_SPECIAL, 0, 0, previousTemporary(), FCT_MFLO);
+      tfree(1);
+    }
+
+    emitRFormat(OP_SPECIAL, previousTemporary(), currentTemporary(), previousTemporary(), FCT_ADDU);
+    tfree(1);
+  }
+
+  if(symbol != SYM_RSQRBRACKET){
+    syntaxErrorSymbol(SYM_RSQRBRACKET);
+
+    exit(-1);
+  }
+
+  getSymbol();
+
+  return size;
+}
+//hw7 end
+
 void gr_cstar() {
   int type;
   int* variableOrProcedureName;
   int currentLineNumber;
   int initialValue;
   int* entry;
+  //hw7 start
+  int dimSize;
+  int totalSize;
+  //hw7 end
 
   while (symbol != SYM_EOF) {
     while (lookForType()) {
@@ -4339,7 +5179,35 @@ void gr_cstar() {
           // type identifier "(" ...
           // procedure declaration or definition
           gr_procedure(variableOrProcedureName, type);
-        else {
+        //hw7 start
+        // type identifier "["
+        else if(symbol == SYM_LSQRBRACKET){
+          totalSize = 1;
+          dimSize = 0;
+          arrayDeklaration = 1;
+
+          entry = createSymbolTableEntry(GLOBAL_TABLE, variableOrProcedureName, currentLineNumber, ARRAY, type, 0, 0);
+
+          while(symbol == SYM_LSQRBRACKET){
+            dimSize = gr_selector(0, entry);
+            //write the new size into the linked list for size in the symbol table entry
+            addDimension(entry, dimSize);
+            totalSize = totalSize * dimSize;
+          }
+          //add the needed memory for the array to calculate the offset of gp pointer
+          allocatedMemory = allocatedMemory + WORDSIZE * totalSize;
+          setAddress(entry, -allocatedMemory);
+          
+          arrayDeklaration = 0;
+
+          if(symbol != SYM_SEMICOLON){
+            syntaxErrorSymbol(SYM_SEMICOLON);
+
+            exit(-1);
+          }
+          getSymbol();
+          //hw7 end
+        }else {
           currentLineNumber = lineNumber;
 
           if (symbol == SYM_SEMICOLON) {
@@ -4348,6 +5216,7 @@ void gr_cstar() {
             getSymbol();
 
             initialValue = 0;
+
           } else
             // type identifier "=" ...
             // global variable definition
@@ -4378,17 +5247,15 @@ void gr_cstar() {
 // ------------------------ MACHINE CODE LIBRARY -------------------
 // -----------------------------------------------------------------
 
-
 void emitLeftShiftBy(int b) {
   // assert: 0 <= b < 15
-  
-  // Tabea hw3
-  emitRFormat(OP_SPECIAL, 0, currentTemporary(), currentTemporary(), b, FCT_SLL);
-  
+
   // load multiplication factor less than 2^15 to avoid sign extension
-  //emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), twoToThePowerOf(b));
-  //emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
-  //emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+  // hw3 emitIFormat(OP_ADDIU, REG_ZR, nextTemporary(), twoToThePowerOf(b));
+  // hw3 emitRFormat(OP_SPECIAL, currentTemporary(), nextTemporary(), 0, FCT_MULTU);
+  // hw3 emitRFormat(OP_SPECIAL, 0, 0, currentTemporary(), FCT_MFLO);
+  // hw3
+  emitRFormatExtended(OP_SPECIAL, 0, currentTemporary(), currentTemporary(), b, FCT_SLL);
 }
 
 void emitMainEntry() {
@@ -4406,10 +5273,8 @@ void emitMainEntry() {
   // 8 NOPs per register is enough for initialization
   // since we load positive integers < 2^28 which take
   // no more than 8 instructions each, see load_integer
-  // Tabea hw3 FCT_SLL statt FCT_NOP
   while (i < 16) {
-    // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_NOP);
+    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP);
 
     i = i + 1;
   }
@@ -4576,6 +5441,10 @@ void selfie_compile() {
       print((int*) ": ");
       printInteger(numberOfGlobalVariables);
       print((int*) " global variables, ");
+      //hw7 start
+      printInteger(numberOfArrays);
+      print((int*) " arrays, ");
+      //hw7 end
       printInteger(numberOfProcedures);
       print((int*) " procedures, ");
       printInteger(numberOfStrings);
@@ -4632,7 +5501,8 @@ void selfie_compile() {
 // -----------------------------------------------------------------
 
 void printRegister(int reg) {
-  print((int*) *(REGISTERS + reg));
+  //hw7
+  print((int*) REGISTERS[ABBR][reg]);
 }
 
 // -----------------------------------------------------------------
@@ -4646,13 +5516,25 @@ void printRegister(int reg) {
 // |opcode| rs  | rt  | rd  |shamt|fction|
 // +------+-----+-----+-----+-----+------+
 //    6      5     5     5     5     6
-int encodeRFormat(int opcode, int rs, int rt, int rd, int shiftAmount, int function) {
+int encodeRFormat(int opcode, int rs, int rt, int rd, int shamt, int function) {
   // assert: 0 <= opcode < 2^6
   // assert: 0 <= rs < 2^5
   // assert: 0 <= rt < 2^5
   // assert: 0 <= rd < 2^5
+  // assert: 0 <= shamt < 2^5
   // assert: 0 <= function < 2^6
-  return ((((opcode << 5 | rs) << 5 | rt) << 5 | rd) << 5 | shiftAmount) << 6 | function;
+  // hw3 
+  //hw4
+  //hw5 start
+  int code;
+  code=opcode << 26;
+  code=code|(rs << 21);
+  code=code|(rt << 16);
+  code=code|(rd << 11);
+  code=code|(shamt << 6);
+  code=code|function;
+  return code;
+  //hw5 end
 }
 
 // -----------------------------------------------------------------
@@ -4663,6 +5545,8 @@ int encodeRFormat(int opcode, int rs, int rt, int rd, int shiftAmount, int funct
 // +------+-----+-----+----------------+
 //    6      5     5          16
 int encodeIFormat(int opcode, int rs, int rt, int immediate) {
+  //hw5
+  int code;
   // assert: 0 <= opcode < 2^6
   // assert: 0 <= rs < 2^5
   // assert: 0 <= rt < 2^5
@@ -4670,8 +5554,14 @@ int encodeIFormat(int opcode, int rs, int rt, int immediate) {
   if (immediate < 0)
     // convert from 32-bit to 16-bit two's complement
     immediate = immediate + twoToThePowerOf(16);
-
-  return ((opcode << 5 | rs) << 5 | rt) << 16 | immediate;
+  //hw4
+  //hw5 start
+  code=opcode << 26;
+  code=code|(rs << 21);
+  code=code|(rt << 16);
+  code=code|immediate;
+  return code;
+  //hw5 
 }
 
 // --------------------------------------------------------------
@@ -4684,7 +5574,13 @@ int encodeIFormat(int opcode, int rs, int rt, int immediate) {
 int encodeJFormat(int opcode, int instr_index) {
   // assert: 0 <= opcode < 2^6
   // assert: 0 <= instr_index < 2^26
-  return (opcode << 26) | instr_index;
+  //hw4
+  //hw5 start
+  int code;
+  code=opcode << 26;
+  code=code|instr_index;
+  return code;
+  //hw5 end 
 }
 
 // -----------------------------------------------------------------
@@ -4696,26 +5592,38 @@ int getOpcode(int instruction) {
 }
 
 int getRS(int instruction) {
-  return rightShift(instruction, 21) & 0b11111;
+  //hw6 
+  return rightShift( instruction, 32-(6+5)) & 0b11111;
 }
 
 int getRT(int instruction) {
-  return rightShift(instruction, 16) & 0b11111;
+  //hw5
+  return rightShift(instruction, 32-(6+2*5)) & 0b11111;
 }
 
 int getRD(int instruction) {
-  return rightShift(instruction, 11) & 0b11111;
+  //hw5
+  return rightShift(instruction, 32-(6+3*5)) & 0b11111;
+}
+
+// hw3
+int getShamt(int instruction){
+  //hw5
+  return rightShift(instruction, 32-(6+4*5)) & 0b11111;
 }
 
 int getFunction(int instruction) {
+  //hw5
   return instruction & 0b111111;
 }
 
 int getImmediate(int instruction) {
+  //hw5
   return instruction & 0xFFFF;
 }
 
 int getInstrIndex(int instruction) {
+  //hw5
   return instruction & 0x3FFFFFF;
 }
 
@@ -4725,10 +5633,6 @@ int signExtend(int immediate) {
     return immediate;
   else
     return immediate - twoToThePowerOf(16);
-}
-
-int getShamt(int instruction){
-  return rightShift(instruction, 6) & 0b11111;
 }
 
 // --------------------------------------------------------------
@@ -4742,10 +5646,11 @@ void decodeRFormat() {
   rs          = getRS(ir);
   rt          = getRT(ir);
   rd          = getRD(ir);
+  // hw3
+  shamt       = getShamt(ir);
   immediate   = 0;
   function    = getFunction(ir);
   instr_index = 0;
-  shamt = getShamt(ir);
 }
 
 // --------------------------------------------------------------
@@ -4827,31 +5732,27 @@ void emitInstruction(int instruction) {
     binaryLength = binaryLength + WORDSIZE;
   }
 }
-// Tabea hw3 int shamt hinzugefügt
-void emitRFormat(int opcode, int rs, int rt, int rd, int shamt, int function) {
+
+// hw3
+void emitRFormatExtended(int opcode, int rs, int rt, int rd, int shamt, int function){
   emitInstruction(encodeRFormat(opcode, rs, rt, rd, shamt, function));
+}
+
+void emitRFormat(int opcode, int rs, int rt, int rd, int function) {
+  // hw3
+  emitInstruction(encodeRFormat(opcode, rs, rt, rd, 0, function));
 
   if (opcode == OP_SPECIAL) {
     if (function == FCT_JR)
-      // Tabea hw3 FCT_SLL statt FCT_NOP
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_NOP); // delay slot
+      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
     else if (function == FCT_MFLO) {
       // In MIPS I-III two instructions after MFLO/MFHI
       // must not modify the LO/HI registers
-      // Tabea hw3 FCT_SLL statt FCT_NOP
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // pipeline delay
-      // Tabea hw3 FCT_SLL statt FCT_NOP
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // pipeline delay
+      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
+      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
     } else if (function == FCT_MFHI) {
-      // Tabea hw3 FCT_SLL statt FCT_NOP
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // pipeline delay
-      // Tabea hw3 FCT_SLL statt FCT_NOP
-      // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-      emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SLL); // pipeline delay
+      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
+      emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // pipeline delay
     }
   }
 }
@@ -4860,20 +5761,15 @@ void emitIFormat(int opcode, int rs, int rt, int immediate) {
   emitInstruction(encodeIFormat(opcode, rs, rt, immediate));
 
   if (opcode == OP_BEQ)
-    // Tabea hw3 FCT_SLL statt FCT_NOP
-    // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_NOP); // delay slot
+    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
   else if (opcode == OP_BNE)
-    // Tabea hw3 FCT_SLL statt FCT_NOP
-    // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-    emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_NOP); // delay slot
+    emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
 }
 
 void emitJFormat(int opcode, int instr_index) {
   emitInstruction(encodeJFormat(opcode, instr_index));
-// Tabea hw3 FCT_SLL statt FCT_NOP
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_NOP); // delay slot
+
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_NOP); // delay slot
 }
 
 void fixup_relative(int fromAddress) {
@@ -4923,6 +5819,8 @@ int copyStringToBinary(int* s, int baddr) {
 
 void emitGlobalsStrings() {
   int* entry;
+  int i;
+  int totalSize;
 
   entry = global_symbol_table;
 
@@ -4934,8 +5832,21 @@ void emitGlobalsStrings() {
       storeBinary(binaryLength, getValue(entry));
 
       binaryLength = binaryLength + WORDSIZE;
-    } else if (getClass(entry) == STRING)
+    } else if (getClass(entry) == STRING){
       binaryLength = copyStringToBinary(getString(entry), binaryLength);
+      //hw7 start
+      //allocate space for arrays and initialize it with 0
+    } else if (getClass(entry) == ARRAY){
+      i = 0;
+      totalSize = getTotalSize(entry);
+      while(i < totalSize){
+        storeBinary(binaryLength, 0);
+        
+        binaryLength = binaryLength + WORDSIZE;
+        i = i +1;
+      }
+    }
+    //hw7 end
 
     entry = getNextEntry(entry);
   }
@@ -5136,8 +6047,7 @@ void emitExit() {
 
   // load the correct syscall number and invoke syscall
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_EXIT);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(0, 0, 0, 0, 0, FCT_SYSCALL);
+  emitRFormat(0, 0, 0, 0, FCT_SYSCALL);
 
   // never returns here
 }
@@ -5177,12 +6087,10 @@ void emitRead() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_READ);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
 
   // jump back to caller, return value is in REG_V0
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 void implementRead() {
@@ -5296,10 +6204,9 @@ void emitWrite() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_WRITE);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 void implementWrite() {
@@ -5413,10 +6320,9 @@ void emitOpen() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_OPEN);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 int down_loadString(int* table, int vaddr, int* s) {
@@ -5518,10 +6424,9 @@ void emitMalloc() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_MALLOC);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 void implementMalloc() {
@@ -5566,10 +6471,9 @@ void emitID() {
   createSymbolTableEntry(LIBRARY_TABLE, (int*) "hypster_ID", 0, PROCEDURE, INT_T, 0, binaryLength);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_ID);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 void implementID() {
@@ -5592,10 +6496,9 @@ void emitCreate() {
   createSymbolTableEntry(LIBRARY_TABLE, (int*) "hypster_create", 0, PROCEDURE, INT_T, 0, binaryLength);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_CREATE);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 int doCreate(int parentID) {
@@ -5647,14 +6550,12 @@ void emitSwitch() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_SWITCH);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
 
   // save ID of context from which we are switching here in return register
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_ZR, REG_V1, REG_V0, 0, FCT_ADDU);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, REG_ZR, REG_V1, REG_V0, FCT_ADDU);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 int doSwitch(int toID) {
@@ -5735,10 +6636,9 @@ void emitStatus() {
   createSymbolTableEntry(LIBRARY_TABLE, (int*) "hypster_status", 0, PROCEDURE, INT_T, 0, binaryLength);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_STATUS);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 int doStatus() {
@@ -5781,10 +6681,9 @@ void emitDelete() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_DELETE);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 void doDelete(int ID) {
@@ -5839,10 +6738,9 @@ void emitMap() {
   emitIFormat(OP_ADDIU, REG_SP, REG_SP, WORDSIZE);
 
   emitIFormat(OP_ADDIU, REG_ZR, REG_V0, SYSCALL_MAP);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, 0, 0, 0, 0, FCT_SYSCALL);
-  // Tabea hw3 vorletzter "0"er für parameter shamt hinzugefügt
-  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, 0, FCT_JR);
+  emitRFormat(OP_SPECIAL, 0, 0, 0, FCT_SYSCALL);
+
+  emitRFormat(OP_SPECIAL, REG_RA, 0, 0, FCT_JR);
 }
 
 void doMap(int ID, int page, int frame) {
@@ -6058,15 +6956,168 @@ void fct_syscall() {
   }
 }
 
-void fct_nop() {
-  if (debug) {
-    print((int*)"nop");
-    println();
+// hw3 start
+void fct_sll(){
+  int noNop;
+  noNop=1;
+  if(debug){
+    if(rd==0){
+      if(rt==0){
+        if(shamt==0) noNop=0;
+      }
+    }
+    if(noNop){
+      printFunction(function);
+      print((int*) " ");
+      printRegister(rt);
+      print(",");
+      printRegister(rd);
+      print(",");
+      printInteger(shamt);
+      if (interpret) {
+          print((int*) ": ");
+          printRegister(rt);
+          print((int*) "=");
+          printBinary(*(registers+rt), 0);
+          print((int*) ", shamt=");
+          printInteger(shamt);
+        }
+    }else{
+      print((int*) "nop");
+    }
   }
 
-  if (interpret)
-    pc = pc + WORDSIZE;
+  if(interpret){
+    *(registers+rd) =  *(registers+rt) << shamt;
+
+      pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+      if (interpret) {
+          if(noNop){
+          print((int*) " -> ");
+          printRegister(rd);
+          print((int*) "=");
+          printBinary(*(registers+rd), 0);
+        }
+    }
+    println();
+    }
 }
+
+void fct_srl(){
+  if(debug){
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rt);
+    print(",");
+    printRegister(rd);
+    print(",");
+    printInteger(shamt);
+    if (interpret) {
+        print((int*) ": ");
+        printRegister(rt);
+        print((int*) "=");
+        printBinary(*(registers+rt), 0);
+        print((int*) ", shamt=");
+        printInteger(shamt);
+      }
+  }
+
+  if(interpret){
+    *(registers+rd) = rightShift( *(registers+rt), shamt);
+
+      pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rd);
+      print((int*) "=");
+      printBinary(*(registers+rd), 0);
+    }
+    println();
+    }
+}
+
+void fct_sllv(){
+  if(debug){
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rs);
+    print(",");
+    printRegister(rt);
+    print(",");
+    printRegister(rd);
+    if (interpret) {
+        print((int*) ": ");
+        printRegister(rt);
+        print((int*) "=");
+        printBinary(*(registers+rt), 0);
+        print((int*) ", ");
+        printRegister(rs);
+        print((int*) "=");
+        printInteger(*(registers+rs));
+      }
+  }
+
+  if(interpret){
+    *(registers+rd) =  *(registers+rt) << *(registers+rs);
+
+      pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rd);
+      print((int*) "=");
+      printBinary(*(registers+rd), 0);
+    }
+    println();
+    }
+}
+
+void fct_srlv(){
+  if(debug){
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rs);
+    print(",");
+    printRegister(rt);
+    print(",");
+    printRegister(rd);
+    if (interpret) {
+        print((int*) ": ");
+        printRegister(rt);
+        print((int*) "=");
+        printBinary(*(registers+rt), 0);
+        print((int*) ", ");
+        printRegister(rs);
+        print((int*) "=");
+        printInteger(*(registers+rs));
+      }
+  }
+
+  if(interpret){
+    *(registers+rd) = rightShift( *(registers+rt), *(registers+rs));
+
+      pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rd);
+      print((int*) "=");
+      printBinary(*(registers+rd), 0);
+    }
+    println();
+    }
+}
+//hw3 ende
 
 void op_jal() {
   if (debug) {
@@ -6227,19 +7278,6 @@ void op_bne() {
     }
     println();
   }
-}
-
-int isNop(){
-  if(rd == REG_ZR){
-    if(rt == REG_ZR){
-      if(shamt == 0)
-        return 1;
-      else
-        return 0;
-    }else
-      return 0;
-  }else
-    return 0;
 }
 
 void op_addiu() {
@@ -6491,391 +7529,6 @@ void fct_addu() {
   }
 }
 
-// Tabea hw3
-void fct_sll() {
-  if(isNop()){
-    fct_nop();
-  }else {
-    if (debug){
-      printFunction(function);
-      print((int*) " ");
-      printRegister(rd);
-      print((int*) ",");
-      printRegister(rt);
-      print((int*) ",");
-      printInteger(shamt);
-        
-    if(interpret) {
-      print((int*) ": ");
-      printRegister(rd);
-      print((int*) "=");
-      printInteger(*(registers+rd));
-      print((int*) ", ");
-      print((int*) "shamt=");
-      printInteger(shamt);
-    }
-  }
-
-    
-    if(interpret) {
-      *(registers + rd) = (*(registers + rt) << shamt);
-      
-      pc = pc + WORDSIZE;
-    }
-    
-    if(debug) {
-      if(interpret) {
-        print((int*) " -> ");
-        printRegister(rd);
-        print((int*) "=");
-        printInteger(*(registers + rd));
-        println();
-      }
-    }
-  }
-}
-
-void fct_srl() {
-  
-  if (debug) {
-    printFunction(function);
-    print((int*) " ");
-    printRegister(rd);
-    print((int*) ",");
-    printRegister(rt);
-    print((int*) ",");
-    printInteger(shamt);
-      
-  if(interpret) {
-    print((int*) ": ");
-    printRegister(rd);
-    print((int*) "=");
-    print((int*) *(registers+rd));
-    print((int*) ", ");
-    print((int*) "shamt=");
-    printInteger(shamt);
-    }
-  }
-    
-    if(interpret) {
-      *(registers + rd) = rightShift(*(registers + rt), shamt);
-      
-      pc = pc + WORDSIZE;
-    }
-    
-    if(debug) {
-      if(interpret) {
-        print((int*) " -> ");
-        printRegister(rd);
-        print((int*) "=");
-        printInteger(*(registers + rd));
-      }
-    }
-}
-// Tabea hw3
-void fct_sllv() {
-  
-  if (debug) {
-    printFunction(function);
-    print((int*) " ");
-    printRegister(rd);
-    print((int*) ",");
-    printRegister(rt);
-    print((int*) ",");
-    printRegister(rs);
-    if (interpret) {
-      print((int*) ": ");
-      printRegister(rd);
-      print((int*) "=");
-      printInteger(*(registers+rd));
-      print((int*) ",");
-      printRegister(rt);
-      print((int*) "=");
-      printInteger(*(registers+rt));
-      print((int*) ",");
-      printRegister(rs);
-      print((int*) "=");
-      printInteger(*(registers+rs));
-    }
-
-  }
-
-  if(interpret){
-    *(registers+rd) = *(registers+rt) << *(registers+rs);
-        pc = pc + WORDSIZE;
-  }
-
-  if (debug) {
-    if (interpret) {
-      print((int*) " -> ");
-      printRegister(rd);
-      print((int*) "=");
-      printInteger(*(registers+rd));
-    }
-    println();
-  }
-}
-
-// Tabea hw3
-void fct_srlv() {
-  
-  if (debug) {
-    printFunction(function);
-    print((int*) " ");
-    printRegister(rd);
-    print((int*) ",");
-    printRegister(rt);
-    print((int*) ",");
-    printRegister(rs);
-    if (interpret) {
-      print((int*) ": ");
-      printRegister(rd);
-      print((int*) "=");
-      printInteger(*(registers+rd));
-      print((int*) ",");
-      printRegister(rt);
-      print((int*) "=");
-      printInteger(*(registers+rt));
-      print((int*) ",");
-      printRegister(rs);
-      print((int*) "=");
-      printInteger(*(registers+rs));
-    }
-
-  }
-
-  if(interpret){
-    *(registers+rd) = rightShift(*(registers + rt), *(registers + rs));
-    pc = pc + WORDSIZE;
-  }
-
-  if (debug) {
-    if (interpret) {
-      print((int*) " -> ");
-      printRegister(rd);
-      print((int*) "=");
-      printInteger(*(registers+rd));
-    }
-    println();
-  }
-}
-
-// hw 5
-void fct_and(){
-  if (debug) {
-    printFunction(function);
-    print((int*) " ");
-    printRegister(rd);
-    print((int*) ",");
-    printRegister(rs);
-    print((int*) ",");
-    printRegister(rt);
-    if (interpret) {
-      print((int*) ": ");
-      printRegister(rd);
-      print((int*) "=");
-      printInteger(*(registers+rd));
-      print((int*) ",");
-      printRegister(rs);
-      print((int*) "=");
-      printInteger(*(registers+rs));
-      print((int*) ",");
-      printRegister(rt);
-      print((int*) "=");
-      printInteger(*(registers+rt));
-    }
-  }
-
-  if (interpret) {
-    *(registers+rd) = *(registers+rs) & *(registers+rt);
-
-    pc = pc + WORDSIZE;
-  }
-
-  if (debug) {
-    if (interpret) {
-      print((int*) " -> ");
-      printRegister(rd);
-      print((int*) "=");
-      printInteger(*(registers+rd));
-    }
-    println();
-  }
-
-}
-
-// hw 5
-void op_andi() {
-  if (debug) {
-    printFunction(function);
-    print((int*) " ");
-    printRegister(rt);
-    print((int*) ",");
-    printRegister(rs);
-    print((int*) ",");
-    printInteger(immediate);
-    if (interpret) {
-      print((int*) ": ");
-      printRegister(rt);
-      print((int*) "=");
-      printInteger(*(registers+rt));
-      print((int*) ",");
-      printRegister(rs);
-      print((int*) "=");
-      printInteger(*(registers+rs));
-      print((int*) ",");
-      print((int*)"immediate:");
-      print((int*) "=");
-      printInteger(immediate);
-    }
-  }
-
-  if (interpret) {
-    *(registers+rt) = *(registers+rs) & signExtend(immediate);
-
-    pc = pc + WORDSIZE;
-  }
-
-  if (debug) {
-    if (interpret) {
-      print((int*) " -> ");
-      printRegister(rt);
-      print((int*) "=");
-      printInteger(*(registers+rt));
-    }
-    println();
-  }
-}
-
-// hw 5
-void fct_or(){
-  if (debug) {
-    printFunction(function);
-    print((int*) " ");
-    printRegister(rd);
-    print((int*) ",");
-    printRegister(rs);
-    print((int*) ",");
-    printRegister(rt);
-    if (interpret) {
-      print((int*) ": ");
-      printRegister(rd);
-      print((int*) "=");
-      printInteger(*(registers+rd));
-      print((int*) ",");
-      printRegister(rs);
-      print((int*) "=");
-      printInteger(*(registers+rs));
-      print((int*) ",");
-      printRegister(rt);
-      print((int*) "=");
-      printInteger(*(registers+rt));
-    }
-  }
-
-  if (interpret) {
-    *(registers+rd) = *(registers+rs) | *(registers+rt);
-
-    pc = pc + WORDSIZE;
-  }
-
-  if (debug) {
-    if (interpret) {
-      print((int*) " -> ");
-      printRegister(rt);
-      print((int*) "=");
-      printInteger(*(registers+rt));
-    }
-    println();
-  }
-}
-
-// hw 5
-void op_ori(){
-  if (debug) {
-    printFunction(function);
-    print((int*) " ");
-    printRegister(rt);
-    print((int*) ",");
-    printRegister(rs);
-    print((int*) ",");
-    printInteger(immediate);
-    if (interpret) {
-      print((int*) ": ");
-      printRegister(rt);
-      print((int*) "=");
-      printInteger(*(registers+rt));
-      print((int*) ",");
-      printRegister(rs);
-      print((int*) "=");
-      printInteger(*(registers+rs));
-      print((int*) ",");
-      print((int*)"immediate:");
-      print((int*) "=");
-      printInteger(immediate);
-    }
-  }
-
-  if(interpret){
-    *(registers+rt) = *(registers+rs) | signExtend(immediate);
-
-    pc = pc + WORDSIZE;
-  }
-
-  if (debug) {
-    if (interpret) {
-      print((int*) " -> ");
-      printRegister(rt);
-      print((int*) "=");
-      printInteger(*(registers+rt));
-    }
-    println();
-  }
-}
-
-// hw 5
-void fct_nor(){
-  if (debug) {
-    printFunction(function);
-    print((int*) " ");
-    printRegister(rd);
-    print((int*) ",");
-    printRegister(rs);
-    print((int*) ",");
-    printRegister(rt);
-    if (interpret) {
-      print((int*) ": ");
-      printRegister(rd);
-      print((int*) "=");
-      printInteger(*(registers+rd));
-      print((int*) ",");
-      printRegister(rs);
-      print((int*) "=");
-      printInteger(*(registers+rs));
-      print((int*) ",");
-      printRegister(rt);
-      print((int*) "=");
-      printInteger(*(registers+rt));
-    }
-  }
-
-  if(interpret){
-    *(registers+rd) = ~(*(registers+rs) | *(registers+rt));
-
-    pc = pc + WORDSIZE;
-  }
-
-  if (debug) {
-    if (interpret) {
-      print((int*) " -> ");
-      printRegister(rd);
-      print((int*) "=");
-      printInteger(*(registers+rd));
-    }
-    println();
-  }
-}
-
 void fct_subu() {
   if (debug) {
     printFunction(function);
@@ -7074,6 +7727,202 @@ void op_sw() {
   }
 }
 
+//hw5 start
+void fct_and(){
+  if(debug){
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rd);
+    print((int*) ",");
+    printRegister(rs);
+    print((int*) ",");
+    printRegister(rt);
+    if (interpret) {
+        print((int*) ": ");
+        printRegister(rs);
+        print((int*) "=");
+        printBinary(*(registers+rs), 0);
+        print((int*) ",");
+        printRegister(rt);
+        print((int*) "=");
+        printBinary(*(registers+rt), 0);
+      }
+  }
+
+  if(interpret){
+    *(registers+rd) = *(registers+rt) & *(registers+rs);
+
+      pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rd);
+      print((int*) "=");
+      printBinary(*(registers+rd), 0);
+    }
+    println();
+  }
+}
+
+void fct_or(){
+  if(debug){
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rd);
+    print((int*) ",");
+    printRegister(rs);
+    print((int*) ",");
+    printRegister(rt);
+    if (interpret) {
+        print((int*) ": ");
+        printRegister(rs);
+        print((int*) "=");
+        printBinary(*(registers+rs), 0);
+        print((int*) ",");
+        printRegister(rt);
+        print((int*) "=");
+        printBinary(*(registers+rt), 0);
+      }
+  }
+
+  if(interpret){
+    *(registers+rd) = *(registers+rt) | *(registers+rs);
+
+      pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rd);
+      print((int*) "=");
+      printBinary(*(registers+rd), 0);
+    }
+    println();
+  }
+}
+
+void fct_nor(){
+  if(debug){
+    printFunction(function);
+    print((int*) " ");
+    printRegister(rd);
+    print((int*) ",");
+    printRegister(rs);
+    print((int*) ",");
+    printRegister(rt);
+    if (interpret) {
+        print((int*) ": ");
+        printRegister(rs);
+        print((int*) "=");
+        printBinary(*(registers+rs), 0);
+        print((int*) ",");
+        printRegister(rt);
+        print((int*) "=");
+        printBinary(*(registers+rt), 0);
+      }
+  }
+
+  if(interpret){
+    *(registers+rd) = ~(*(registers+rt) | *(registers+rs));
+
+      pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rd);
+      print((int*) "=");
+      printBinary(*(registers+rd), 0);
+    }
+    println();
+  }
+}
+
+void op_andi(){
+  if (debug) {
+    printOpcode(opcode);
+    print((int*) " ");
+    printRegister(rt);
+    print((int*) ",");
+    printRegister(rs);
+    print((int*) ",");
+    printInteger(signExtend(immediate));
+    if (interpret) {
+      print((int*) ": ");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+      print((int*) ", ");
+      printRegister(rs);
+      print((int*) "=");
+      printInteger(*(registers+rs));
+    }
+  }
+
+  if (interpret) {
+    *(registers+rt) = *(registers+rs) & signExtend(immediate);
+
+    // TODO: check for overflow
+
+    pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+    }
+    println();
+  }
+}
+
+void op_ori(){
+  if (debug) {
+    printOpcode(opcode);
+    print((int*) " ");
+    printRegister(rt);
+    print((int*) ",");
+    printRegister(rs);
+    print((int*) ",");
+    printInteger(signExtend(immediate));
+    if (interpret) {
+      print((int*) ": ");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+      print((int*) ",");
+      printRegister(rs);
+      print((int*) "=");
+      printInteger(*(registers+rs));
+    }
+  }
+
+  if (interpret) {
+    *(registers+rt) = *(registers+rs) | signExtend(immediate);
+
+    // TODO: check for overflow
+
+    pc = pc + WORDSIZE;
+  }
+
+  if (debug) {
+    if (interpret) {
+      print((int*) " -> ");
+      printRegister(rt);
+      print((int*) "=");
+      printInteger(*(registers+rt));
+    }
+    println();
+  }
+}
+//hw5 end
+
 // -----------------------------------------------------------------
 // -------------------------- INTERPRETER --------------------------
 // -----------------------------------------------------------------
@@ -7089,7 +7938,8 @@ int encodeException(int exception, int parameter) {
   if (parameter < 0)
     // convert from 32-bit to 16-bit two's complement
     parameter = parameter + twoToThePowerOf(16);
-
+  
+  //hw4
   return (exception << 16) + parameter;
 }
 
@@ -7098,7 +7948,8 @@ int decodeExceptionNumber(int status) {
 }
 
 int decodeExceptionParameter(int status) {
-  return signExtend(rightShift((status << 16), 16));
+  //hw4
+  return signExtend(rightShift(status << 16, 16));
 }
 
 void printStatus(int status) {
@@ -7160,7 +8011,25 @@ void execute() {
   }
 
   if (opcode == OP_SPECIAL) {
-    if (function == FCT_ADDU)
+    // hw3 start
+    if (function == FCT_SLL)
+      fct_sll();
+    else if (function == FCT_SRL)
+      fct_srl();
+    else if (function == FCT_SLLV)
+      fct_sllv();
+    else if (function == FCT_SRLV)
+      fct_srlv();
+    // hw3 end
+    //hw5 start
+    else if (function == FCT_AND)
+      fct_and();
+    else if (function == FCT_OR)
+      fct_or();
+    else if (function == FCT_NOR)
+      fct_nor();
+    //hw5 end
+    else if (function == FCT_ADDU)
       fct_addu();
     else if (function == FCT_SUBU)
       fct_subu();
@@ -7178,22 +8047,6 @@ void execute() {
       fct_jr();
     else if (function == FCT_SYSCALL)
       fct_syscall();
-    // Tabea hw3 FCT's hinzugefügt
-    else if (function == FCT_SLL)
-      fct_sll();
-    else if (function == FCT_SRLV)
-      fct_srlv();
-    else if (function == FCT_SLLV)
-      fct_sllv();
-    else if (function == FCT_SRL)
-      fct_srl();
-    // hw 5
-    else if (function == FCT_AND)
-      fct_and();
-    else if (function == FCT_OR)
-      fct_or();
-    else if (function == FCT_NOR)
-      fct_nor();
     else
       throwException(EXCEPTION_UNKNOWNINSTRUCTION, 0);
   } else if (opcode == OP_ADDIU)
@@ -7210,11 +8063,12 @@ void execute() {
     op_jal();
   else if (opcode == OP_J)
     op_j();
-  // hw 5
+  //hw5 start
   else if (opcode == OP_ANDI)
     op_andi();
   else if (opcode == OP_ORI)
     op_ori();
+  //hw5 end
   else
     throwException(EXCEPTION_UNKNOWNINSTRUCTION, 0);
 }
@@ -7978,8 +8832,7 @@ void printUsage() {
 
 int selfie() {
   int* option;
-  println();
-  print((int*) "This is Tabea Biel's selfie");
+  print((int*) "this is Tabea Biel's selfie");
   println();
   
   if (numberOfRemainingArguments() == 0)
@@ -8031,5 +8884,6 @@ int main(int argc, int* argv) {
   initSelfie(argc, (int*) argv);
 
   initLibrary();
+
   return selfie();
 }
