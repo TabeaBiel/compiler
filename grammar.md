@@ -63,6 +63,8 @@ shiftExpression  = simpleExpression { ( "<<" | ">>" )  simpleExpression } .
 
 simpleExpression = [ "-" ] term { ( "+" | "-" ) term } .
 
+selector  =  { "[" simpleExpression "]" }.
+
 term             = factor { ( "*" | "/" | "%" ) factor } .
 
 factor           = [ cast ]
