@@ -8,9 +8,9 @@ This is the grammar of the C Star (C\*) programming language.
 
 C\* is a small Turing-complete subset of C that includes dereferencing (the `*` operator) but excludes data structures, bitwise and Boolean operators, and many other features. C\* is supposed to be close to the minimum necessary for implementing a self-compiling, single-pass, recursive-descent compiler.
 
-C\* Keywords: `int`, `while`, `if`, `else`, `return`, `void`
+C\* Keywords: `int`, `while`, `if`, `else`, `return`, `void`, `struct`
 
-C\* Symbols: `=`, `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `<<`, `<=`, `>`, `>>`, `>=`, `&`, `|`, `~`, `,`, `(`, `)`, `{`, `}`, `;`, integer, identifier, character, string
+C\* Symbols: `=`, `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `<=`, `>`, `>=`, `,`, `(`, `)`, `{`, `}`, `;`, '<<', '>>', `&`, `|`, `[`, `]`, `->`, integer, identifier, character, string
 
 with:
 
@@ -35,54 +35,59 @@ letter = "a" | ... | "z" | "A" | ... | "Z" .
 C\* Grammar:
 
 ```
-cstar            = { type identifier [ "=" [ cast ] [ "-" ] literal ] ";" |
-                   ( "void" | type ) identifier procedure } .
+cstar               = { "int" [ "*" ] identifier [ "=" [ cast ] [ "-" ] literal ] ";" |
+                      ( "void" | type ) identifier procedure | "int" [ "*" ] identifier { selector } ";" |
+                      "struct" identifier ( "*" identifier | structDef ) ";" } .
 
-type             = "int" [ "*" ] .
+structDef           = "{" { type identifier ";" } "}" .
 
-cast             = "(" type ")" .
+structAccess        = { "->" identifier } .
 
-literal          = integer | character .
+type                = "int" [ "*" ] | "struct" identifier "*" .
 
-procedure        = "(" [ variable { "," variable } ] ")"
-                    ( ";" | "{" { variable ";" } { statement } "}" ) .
+cast                = "(" type ")" .
 
-variable         = type identifier .
+literal             = integer | character .
 
-statement        = call ";" | while | if | return ";" |
-                   ( [ "*" ] identifier | "*" "(" expression ")" )
-                     "=" expression ";" .
+selector            = "[" simpleExpression "]" .
 
-call             = identifier "(" [ expression { "," expression } ] ")" .
+procedure           = "(" [ variable [ selector ] { "," variable [ selector ] } ] ")"
+                      ( ";" | "{" { variable ";" } { statement } "}" ) .
 
-expression       = comparisonExpression { ( "&" | "|" ) comparisonExpression } .
+variable            = type identifier .
 
-comparisonExpression = shiftExpression [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression ] .
+statement           = call ";" | while | if | return ";" |
+                       ( [ "*" ] identifier [ { selector } | structAccess ] | "*" "(" expression ")" )
+                       "=" expression ";" .
 
-shiftExpression  = simpleExpression { ( "<<" | ">>" )  simpleExpression } .
+call                = identifier "(" [ expression { "," expression } ] ")" .
 
-simpleExpression = [ "-" ] term { ( "+" | "-" ) term } .
+expression(v)       = compExpression(v) [ ( "&" | "|" ) compExpression ] .
 
-selector  =  { "[" simpleExpression "]" }.
+compExpression(v)   = shiftExpression(v) [ ( "==" | "!=" | "<" | ">" | "<=" | ">=" ) shiftExpression ] .
 
-term             = factor { ( "*" | "/" | "%" ) factor } .
+shiftExpression(v)  = simpleExpression(v) { ( "<<" | ">>") simpleExpression } .
 
-factor           = [ cast ]
-                    ( [ "*" ] ( identifier | "(" expression ")" ) |
+simpleExpression(v) = [ "-" ] term(v) { ( "+" | "-" ) term(v) } .
+
+term(v)             = factor(v) { ( "*" | "/" | "%" ) factor(v) } .
+
+factor(v)           = [ cast ]
+                      ( [ "*" | "~"] ( identifier [ { selector } | structAccess ] | "(" expression(v) ")" ) |
                       call |
-                      literal |
+                      literal(v) |
                       string ) .
 
-while            = "while" "(" expression ")"
+while               = "while" "(" expression ")"
                              ( statement |
                                "{" { statement } "}" ) .
 
-if               = "if" "(" expression ")"
+if                  = "if" "(" expression ")"
                              ( statement |
                                "{" { statement } "}" )
                          [ "else"
                              ( statement |
                                "{" { statement } "}" ) ] .
 
-return           = "return" [ expression ] .
+return               = "return" [ expression ] .
 ```
